@@ -163,6 +163,17 @@ public class AndroidMethodVisitor extends MethodVisitor {
 		super.visitFieldInsn(opcode, owner, name, descriptor);
 	}
 
+	// A small amount of headroom protects DX from underreported max_stack
+	// values in unusual / obfuscated bytecode and covers the extra pushes
+	// introduced by our encoding and Thread.yield compatibility rewrites.
+	// The JVM class-file format permits up to 65535 stack slots.
+	private static final int DX_STACK_HEADROOM = 8;
+
+	@Override
+	public void visitMaxs(int maxStack, int maxLocals) {
+		super.visitMaxs(Math.min(65535, maxStack + DX_STACK_HEADROOM), maxLocals);
+	}
+
 	@Override
 	public void visitMultiANewArrayInsn(String descriptor, int numDimensions) {
 		descriptor = descriptor.replace("java/util/Timer", "javax/microedition/shell/custom/Timer");
