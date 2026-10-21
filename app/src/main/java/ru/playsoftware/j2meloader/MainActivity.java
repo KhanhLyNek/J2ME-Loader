@@ -23,6 +23,8 @@ import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
 import android.view.ViewConfiguration;
 import android.widget.Toast;
 
@@ -61,12 +63,14 @@ public class MainActivity extends AppCompatActivity {
 
 	private SharedPreferences preferences;
 	private AppListModel appListModel;
+	private boolean storagePermissionDialogShowing;
+	private boolean externalStorageReady;
 
 	@Override
 	public void onCreate(@Nullable Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		if (FileUtils.isExternalStorageLegacy()) {
+		if (!Config.useExternalWorkDir() && FileUtils.isExternalStorageLegacy()) {
 			permissionsLauncher.launch(STORAGE_PERMISSIONS);
 		}
 		appListModel = new ViewModelProvider(this).get(AppListModel.class);
@@ -86,16 +90,72 @@ public class MainActivity extends AppCompatActivity {
 			preferences.edit().putBoolean(PREF_TOOLBAR, enable).apply();
 		}
 		boolean warningShown = preferences.getBoolean(PREF_STORAGE_WARNING_SHOWN, false);
-		if (!FileUtils.isExternalStorageLegacy() && !warningShown) {
+		if (!Config.useExternalWorkDir() && !FileUtils.isExternalStorageLegacy() && !warningShown) {
 			showScopedStorageDialog();
 			preferences.edit().putBoolean(PREF_STORAGE_WARNING_SHOWN, true).apply();
 		}
 		setVolumeControlStream(AudioManager.STREAM_MUSIC);
 	}
 
+	@Override
+	protected void onResume() {
+		super.onResume();
+		if (!Config.useExternalWorkDir()) {
+			if (!FileUtils.isExternalStorageLegacy()) {
+				checkAndCreateDirs();
+			}
+			return;
+		}
+		if (Environment.isExternalStorageManager()) {
+			if (!externalStorageReady) {
+				externalStorageReady = true;
+				checkAndCreateDirs();
+			}
+		} else {
+			externalStorageReady = false;
+			if (!storagePermissionDialogShowing) {
+				requestExternalStorageAccess();
+			}
+		}
+	}
+
+	private void requestExternalStorageAccess() {
+		storagePermissionDialogShowing = true;
+		new AlertDialog.Builder(this)
+				.setTitle("Allow shared J2ME storage")
+				.setMessage("This version stores games, settings and RMS files in /storage/emulated/0/J2ME/. "
+						+ "Please enable 'Allow access to manage all files' for this app.")
+				.setCancelable(false)
+				.setPositiveButton("Open settings", (d, w) -> {
+					storagePermissionDialogShowing = false;
+					Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+							Uri.parse("package:" + getPackageName()));
+					try {
+						startActivity(intent);
+					} catch (Exception e) {
+						try {
+							startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
+						} catch (Exception unavailable) {
+							Toast.makeText(this, "Storage settings are unavailable", Toast.LENGTH_LONG).show();
+							finish();
+						}
+					}
+				})
+				.setNegativeButton("Exit", (d, w) -> finish())
+				.show();
+	}
+
 	private void checkAndCreateDirs() {
 		String emulatorDir = Config.getEmulatorDir();
 		File dir = new File(emulatorDir);
+		if (Config.useExternalWorkDir()) {
+			if (FileUtils.initWorkDir(dir)) {
+				appListModel.onWorkDirReady();
+			} else {
+				alertDirCannotCreate(emulatorDir);
+			}
+			return;
+		}
 		if (dir.isDirectory() && dir.canWrite()) {
 			FileUtils.initWorkDir(dir);
 			appListModel.onWorkDirReady();
