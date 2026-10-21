@@ -181,6 +181,11 @@ public class BatchInstallerDialog extends DialogFragment {
 		mDialog.setMessage(currentSourceName);
 		showProgress();
 		installer = new AppInstaller(null, uri, requireActivity().getApplication(), appRepository);
+		installer.setProgressListener(stage -> {
+			if (isAdded() && binding != null && !cancelled) {
+				binding.installationStatus.setText(currentSourceName + "\n" + stage);
+			}
+		});
 		Disposable disposable = Single.create(installer::loadInfo)
 				.subscribeOn(Schedulers.computation())
 				.observeOn(AndroidSchedulers.mainThread())
