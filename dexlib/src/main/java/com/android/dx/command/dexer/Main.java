@@ -1405,9 +1405,11 @@ public class Main {
      */
     private class ClassDefItemConsumer implements Callable<Boolean> {
 
+        private final String name;
         Future<ClassDefItem> futureClazz;
 
         private ClassDefItemConsumer(String name, Future<ClassDefItem> futureClazz) {
+            this.name = name;
             this.futureClazz = futureClazz;
         }
 
@@ -1425,7 +1427,7 @@ public class Main {
                 // These, as well as any exceptions from addClassToDex,
                 // are handled and reported in processAllFiles().
                 Throwable t = ex.getCause();
-                throw (t instanceof Exception) ? (Exception) t : ex;
+                throw new RuntimeException("DEX failed for " + name + ": " + t, t);
             }
         }
     }
