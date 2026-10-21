@@ -26,13 +26,15 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Install Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install required Android packages
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-37" "build-tools;37.0.0" "ndk;29.0.14206865"
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          fi
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platforms;android-37" "build-tools;37.0.0" "ndk;29.0.14206865"
 
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v4
