@@ -41,7 +41,12 @@ public class AndroidProducer {
 			throw new IllegalArgumentException("Class name does not match path");
 		}
 
-		ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+		// Some older and obfuscated J2ME classes contain uncommon control-flow
+		// patterns. ASM COMPUTE_MAXS may produce an operand-stack bound that
+		// DX cannot simulate after MicroEmulator's instruction rewrites.
+		// AndroidMethodVisitor reserves a small, bounded stack margin instead.
+		// No new local variables are introduced by these rewrites.
+		ClassWriter cw = new ClassWriter(0);
 		ClassVisitor cv = new AndroidClassVisitor(cw);
 		cr.accept(cv, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
 
