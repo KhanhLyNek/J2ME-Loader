@@ -41,15 +41,41 @@ public class AndroidProducer {
 			throw new IllegalArgumentException("Class name does not match path");
 		}
 
-		// Some older and obfuscated J2ME classes contain uncommon control-flow
-		// patterns. ASM COMPUTE_MAXS may produce an operand-stack bound that
-		// DX cannot simulate after MicroEmulator's instruction rewrites.
-		// AndroidMethodVisitor reserves a small, bounded stack margin instead.
-		// No new local variables are introduced by these rewrites.
-		ClassWriter cw = new ClassWriter(0);
+		ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 		ClassVisitor cv = new AndroidClassVisitor(cw);
 		cr.accept(cv, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
 
 		return cw.toByteArray();
+	}
+
+	/**
+	 * Compatibility fallback for a class that DX rejected with "stack: overflow".
+	 * This does NOT instrument the methods again; it preserves the instructions
+	 * from the first pass while adding a bounded amount of JVM operand-stack
+	 * capacity. Healthy classes are never modified by this fallback.
+	 */
+	public static byte[] withStackHeadroom(byte[] instrumentedClass, final int extraSlots) {
+		if (extraSlots <= 0 || extraSlots > 64) {
+			throw new IllegalArgumentException("Invalid stack headroom: " + extraSlots);
+		}
+		ClassReader reader = new ClassReader(instrumentedClass);
+		ClassWriter writer = new ClassWriter(0);
+		ClassVisitor visitor = new ClassVisitor(org.objectweb.asm.Opcodes.ASM9, writer) {
+			@Override
+			public org.objectweb.asm.MethodVisitor visitMethod(int access, String name,
+					String descriptor, String signature, String[] exceptions) {
+				org.objectweb.asm.MethodVisitor delegate =
+						super.visitMethod(access, name, descriptor, signature, exceptions);
+				return new org.objectweb.asm.MethodVisitor(
+						org.objectweb.asm.Opcodes.ASM9, delegate) {
+					@Override
+					public void visitMaxs(int maxStack, int maxLocals) {
+						super.visitMaxs(Math.min(65535, maxStack + extraSlots), maxLocals);
+					}
+				};
+			}
+		};
+		reader.accept(visitor, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+		return writer.toByteArray();
 	}
 }
