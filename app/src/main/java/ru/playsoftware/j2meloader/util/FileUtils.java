@@ -97,6 +97,11 @@ public class FileUtils {
 	}
 
 	public static File getFileForUri(Context context, Uri uri) throws IOException {
+		return getFileForUri(context, uri, new File(context.getCacheDir(), "installer"));
+	}
+
+	/** A private temporary folder avoids concurrent content-URI installs overwriting tmp.jar. */
+	public static File getFileForUri(Context context, Uri uri, File tmpDir) throws IOException {
 		if ("file".equals(uri.getScheme())) {
 			String path = uri.getPath();
 			if (path != null) {
@@ -106,7 +111,6 @@ public class FileUtils {
 				}
 			}
 		}
-		File tmpDir = new File(context.getCacheDir(), "installer");
 		if (!tmpDir.exists() && !tmpDir.mkdirs()) {
 			throw new IOException("Can't create directory: " + tmpDir);
 		}
