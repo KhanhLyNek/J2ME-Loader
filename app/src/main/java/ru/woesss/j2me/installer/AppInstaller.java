@@ -18,9 +18,10 @@ package ru.woesss.j2me.installer;
 
 import android.app.Application;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
-import com.android.dx.command.dexer.Main;
 
 import net.lingala.zip4j.io.inputstream.ZipInputStream;
 import net.lingala.zip4j.model.FileHeader;
@@ -38,6 +39,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.jar.JarFile;
 
 import io.reactivex.Single;
@@ -46,6 +48,7 @@ import ru.playsoftware.j2meloader.applist.AppItem;
 import ru.playsoftware.j2meloader.appsdb.AppRepository;
 import ru.playsoftware.j2meloader.config.Config;
 import ru.playsoftware.j2meloader.util.ConverterException;
+import ru.playsoftware.j2meloader.util.DexConverter;
 import ru.playsoftware.j2meloader.util.FileUtils;
 import ru.playsoftware.j2meloader.util.IOUtils;
 import ru.playsoftware.j2meloader.util.ZipUtils;
@@ -76,6 +79,23 @@ public class AppInstaller {
 	private File tmpDir;
 	private AppItem currentApp;
 	private File srcFile;
+	private ProgressListener progressListener;
+
+	interface ProgressListener {
+		void onProgress(String stage);
+	}
+
+	void setProgressListener(ProgressListener listener) {
+		this.progressListener = listener;
+	}
+
+	private void reportProgress(String stage) {
+		Log.i(TAG, stage);
+		ProgressListener listener = progressListener;
+		if (listener != null) {
+			new Handler(Looper.getMainLooper()).post(() -> listener.onProgress(stage));
+		}
+	}
 
 	AppInstaller(String path, Uri uri, Application context, AppRepository appRepository) {
 		id = -1;
@@ -83,14 +103,14 @@ public class AppInstaller {
 		if (path != null) srcFile = new File(path);
 		this.uri = uri;
 		this.context = context;
-		this.cacheDir = new File(context.getCacheDir(), "installer");
+		this.cacheDir = new File(context.getCacheDir(), "installer-" + UUID.randomUUID());
 	}
 
 	public AppInstaller(int id, Application context, AppRepository appRepository) {
 		this.id = id;
 		this.context = context;
 		this.appRepository = appRepository;
-		this.cacheDir = new File(context.getCacheDir(), "installer");
+		this.cacheDir = new File(context.getCacheDir(), "installer-" + UUID.randomUUID());
 	}
 
 	Descriptor getNewDescriptor() {
@@ -116,13 +136,19 @@ public class AppInstaller {
 			emitter.onSuccess(STATUS_EQUAL);
 			return;
 		}
+		if (uri == null && srcFile != null) {
+			uri = Uri.fromFile(srcFile);
+		}
+		if (uri == null) {
+			throw new ConverterException("No JAR or JAD file was selected");
+		}
 		boolean isLocal;
-		boolean isContentUri = uri.getScheme().equals("content");
+		boolean isContentUri = "content".equals(uri.getScheme());
 		if ("http".equals(uri.getScheme()) || "https".equals(uri.getScheme())) {
 			downloadJad();
 			isLocal = false;
 		} else {
-			srcFile = FileUtils.getFileForUri(context, uri);
+			srcFile = FileUtils.getFileForUri(context, uri, cacheDir);
 			isLocal = true;
 		}
 
@@ -160,7 +186,7 @@ public class AppInstaller {
 
 	Single<Integer> updateInfo(Uri jarUri) {
 		return Single.create(emitter -> {
-			srcJar = FileUtils.getFileForUri(context, jarUri);
+			srcJar = FileUtils.getFileForUri(context, jarUri, cacheDir);
 			manifest = loadManifest(srcJar);
 			if (!manifest.equals(newDesc)) {
 				emitter.onSuccess(STATUS_UNMATCHED);
@@ -276,9 +302,16 @@ public class AppInstaller {
 		if (!cacheDir.exists() && !cacheDir.mkdirs()) {
 			throw new ConverterException("Can't create cache dir");
 		}
-		tmpDir = new File(targetDir.getParent(), ".tmp");
-		if (!tmpDir.isDirectory() && !tmpDir.mkdirs())
-			throw new ConverterException("Can't create directory: '" + targetDir + "'");
+		File parentDir = targetDir.getParentFile();
+		if (parentDir == null || (!parentDir.isDirectory() && !parentDir.mkdirs())) {
+			throw new ConverterException("Can't create converted apps directory: " + parentDir);
+		}
+		// Never share an installation directory with another install. This
+		// also prevents a previous failed conversion from contaminating this one.
+		tmpDir = new File(parentDir, ".install-" + UUID.randomUUID());
+		if (!tmpDir.mkdir()) {
+			throw new ConverterException("Can't create temporary installation directory: " + tmpDir);
+		}
 		if (srcJar == null) {
 			srcJar = new File(cacheDir, "tmp.jar");
 			downloadJar();
@@ -288,13 +321,8 @@ public class AppInstaller {
 				return;
 			}
 		}
-		try {
-			Main.main(new String[]{"--no-optimize", "--core-library",
-					"--output=" + tmpDir + Config.MIDLET_DEX_FILE,
-					srcJar.getAbsolutePath()});
-		} catch (Throwable e) {
-			throw new ConverterException("Dexing error", e);
-		}
+		reportProgress("Converting Java classes to DEX...");
+		DexConverter.convert(srcJar, new File(tmpDir, Config.MIDLET_DEX_FILE));
 		// Never register a game whose code could not be generated. Otherwise it
 		// appears installed but fails at startup with NoSuchFileException.
 		File convertedDex = new File(tmpDir, Config.MIDLET_DEX_FILE);
@@ -305,6 +333,7 @@ public class AppInstaller {
 			manifest.merge(newDesc);
 			newDesc = manifest;
 		}
+		reportProgress("Copying game resources...");
 		File resJar = new File(tmpDir, Config.MIDLET_RES_FILE);
 		FileUtils.copyFileUsingChannel(srcJar, resJar);
 		String icon = newDesc.getIcon();
@@ -320,9 +349,25 @@ public class AppInstaller {
 			}
 		}
 		newDesc.writeTo(new File(tmpDir, Config.MIDLET_MANIFEST_FILE));
-		FileUtils.deleteDirectory(targetDir);
+		reportProgress("Finishing JAR installation...");
+		// Keep an existing installation intact until the new one is ready.
+		// A failure to move the new directory must not destroy the old game.
+		File backupDir = null;
+		if (targetDir.exists()) {
+			backupDir = new File(parentDir, ".backup-" + UUID.randomUUID());
+			if (!targetDir.renameTo(backupDir)) {
+				throw new ConverterException("Can't back up installed game: " + targetDir);
+			}
+		}
 		if (!tmpDir.renameTo(targetDir)) {
-			throw new ConverterException("Can't move '" + tmpDir + "' to '" + targetDir + "'");
+			if (backupDir != null && !backupDir.renameTo(targetDir)) {
+				Log.e(TAG, "Couldn't restore original installed game from " + backupDir);
+			}
+			throw new ConverterException("Can't move new game from " + tmpDir + " to " + targetDir);
+		}
+		tmpDir = null;
+		if (backupDir != null && !FileUtils.deleteDirectory(backupDir)) {
+			Log.w(TAG, "Couldn't remove backup directory: " + backupDir);
 		}
 		String name = newDesc.getName();
 		String vendor = newDesc.getVendor();
