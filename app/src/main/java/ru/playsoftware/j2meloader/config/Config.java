@@ -26,6 +26,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 
 import androidx.annotation.Keep;
@@ -70,7 +71,8 @@ public class Config {
 	private static final SharedPreferences.OnSharedPreferenceChangeListener sPrefListener =
 			(sharedPreferences, key) -> {
 				if (PREF_EMULATOR_DIR.equals(key)) {
-					initDirs(sharedPreferences.getString(key, emulatorDir));
+					initDirs(useExternalWorkDir() ? getExternalWorkDir() :
+							sharedPreferences.getString(key, emulatorDir));
 				}
 			};
 
@@ -83,14 +85,29 @@ public class Config {
 		SCREENSHOTS_DIR = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
 				+ "/" + appName;
 		SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
-		String path = FileUtils.isExternalStorageLegacy() ?
-				preferences.getString(PREF_EMULATOR_DIR, null) :
-				context.getExternalFilesDir(null).getPath();
+		String path;
+		if (useExternalWorkDir()) {
+			path = getExternalWorkDir();
+		} else if (FileUtils.isExternalStorageLegacy()) {
+			path = preferences.getString(PREF_EMULATOR_DIR, null);
+		} else {
+			File scopedDir = context.getExternalFilesDir(null);
+			path = scopedDir != null ? scopedDir.getAbsolutePath() : null;
+		}
 		if (path == null) {
 			path = Environment.getExternalStorageDirectory() + "/" + appName;
 		}
 		initDirs(path);
 		preferences.registerOnSharedPreferenceChangeListener(sPrefListener);
+	}
+
+	/** Full emulator variants on Android 11+ use a user-visible shared directory. */
+	public static boolean useExternalWorkDir() {
+		return BuildConfig.FULL_EMULATOR && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R;
+	}
+
+	private static String getExternalWorkDir() {
+		return new File(Environment.getExternalStorageDirectory(), "J2ME").getAbsolutePath();
 	}
 
 	public static String getEmulatorDir() {
