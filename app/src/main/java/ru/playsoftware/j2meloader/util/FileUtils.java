@@ -165,6 +165,16 @@ public class FileUtils {
 
 	public static boolean initWorkDir(File dir) {
 		if ((dir.isDirectory() || dir.mkdirs()) && dir.canWrite()) {
+			if (Config.useExternalWorkDir()) {
+				String[] folders = {"data", "configs", "converted", "templates", "fs/c", "fs/e"};
+				for (String folder : folders) {
+					File child = new File(dir, folder);
+					if (!child.isDirectory() && !child.mkdirs()) {
+						Log.e(TAG, "initWorkDir() can't create: " + child);
+						return false;
+					}
+				}
+			}
 			//noinspection ResultOfMethodCallIgnored
 			new File(dir, Config.SHADERS_DIR).mkdir();
 			//noinspection ResultOfMethodCallIgnored
