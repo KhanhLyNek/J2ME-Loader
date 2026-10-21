@@ -30,6 +30,8 @@ import android.view.KeyEvent;
 
 import androidx.core.content.ContextCompat;
 
+import com.android.dx.command.dexer.Main;
+
 import org.acra.ACRA;
 import org.acra.ErrorReporter;
 
@@ -79,6 +81,7 @@ import ru.woesss.j2me.jar.Descriptor;
 public class MicroLoader {
 	private static final String TAG = MicroLoader.class.getName();
 	private static String soundBank;
+	private static final Object DEX_REPAIR_LOCK = new Object();
 
 	ProfileModel params;
 	private final File appDir;
@@ -174,10 +177,60 @@ public class MicroLoader {
 		return midlets;
 	}
 
+	/**
+	 * Game databases or copied installations may still reference an app directory
+	 * whose converted.dex is missing. Rebuild it from the original res.jar without
+	 * touching RMS saves or per-game configuration.
+	 */
+	private File ensureConvertedDex() throws IOException {
+		File dex = new File(appDir, Config.MIDLET_DEX_FILE);
+		if (dex.isFile() && dex.length() > 0) {
+			return dex;
+		}
+		synchronized (DEX_REPAIR_LOCK) {
+			if (dex.isFile() && dex.length() > 0) {
+				return dex;
+			}
+			File jar = new File(appDir, Config.MIDLET_RES_FILE);
+			if (!jar.isFile() || jar.length() == 0) {
+				throw new IOException("Game conversion is incomplete: missing converted.dex and res.jar in "
+						+ appDir + ". Reinstall the original JAR using J2ME Loader's import button.");
+			}
+			File pending = new File(appDir, "repair.dex");
+			if (pending.exists() && !pending.delete()) {
+				throw new IOException("Cannot remove unfinished dex conversion: " + pending);
+			}
+			Log.w(TAG, "Missing " + dex + ", rebuilding from " + jar);
+			try {
+				Main.main(new String[]{"--no-optimize", "--core-library",
+						"--output=" + pending.getAbsolutePath(), jar.getAbsolutePath()});
+			} catch (Throwable error) {
+				// The converter may raise an Error for malformed bytecode.
+				// Report the underlying problem rather than a generic missing-file crash.
+				//noinspection ResultOfMethodCallIgnored
+				pending.delete();
+				throw new IOException("Could not rebuild converted.dex for " + appDirName
+						+ ". Please reinstall the original JAR.", error);
+			}
+			if (!pending.isFile() || pending.length() == 0) {
+				throw new IOException("Dex converter did not generate " + pending
+						+ ". Please reinstall the original JAR.");
+			}
+			if (dex.exists() && !dex.delete()) {
+				throw new IOException("Cannot replace broken converted.dex: " + dex);
+			}
+			if (!pending.renameTo(dex)) {
+				throw new IOException("Cannot move rebuilt dex from " + pending + " to " + dex);
+			}
+			Log.i(TAG, "Rebuilt converted.dex successfully: " + dex);
+			return dex;
+		}
+	}
+
 	MIDlet loadMIDlet(String mainClass) throws ClassNotFoundException, InstantiationException,
 			IllegalAccessException, NoSuchMethodException, InvocationTargetException, IOException {
 		if (BuildConfig.FULL_EMULATOR) {
-			File dexSource = new File(appDir, Config.MIDLET_DEX_FILE);
+			File dexSource = ensureConvertedDex();
 			File codeCacheDir = ContextCompat.getCodeCacheDir(context);
 			File dexOptDir = new File(codeCacheDir, Config.DEX_OPT_CACHE_DIR);
 			if (dexOptDir.exists()) {
