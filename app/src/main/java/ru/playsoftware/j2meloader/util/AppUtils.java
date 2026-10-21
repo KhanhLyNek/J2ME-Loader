@@ -26,7 +26,6 @@ import androidx.annotation.NonNull;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -42,24 +41,24 @@ public class AppUtils {
 		ArrayList<AppItem> apps = new ArrayList<>();
 		File appsDir = new File(Config.getAppDir());
 		for (String appFolderName : appFolders) {
+			if (appFolderName.startsWith(".")) {
+				// .install-* and .backup-* belong to in-progress transactions.
+				continue;
+			}
 			File appFolder = new File(appsDir, appFolderName);
 			if (!appFolder.isDirectory()) {
-				if (!appFolder.delete()) {
-					Log.e(TAG, "getAppsList() failed delete file: " + appFolder);
-				}
 				continue;
 			}
 			File dex = new File(appFolder, Config.MIDLET_DEX_FILE);
 			if (!dex.isFile()) {
-				FileUtils.deleteDirectory(appFolder);
+				Log.w(TAG, "Game has no converted.dex; preserving files for repair: " + appFolder);
 				continue;
 			}
 			try {
 				AppItem item = getApp(appFolder);
 				apps.add(item);
 			} catch (Exception e) {
-				Log.w(TAG, "getAppsList: ", e);
-				FileUtils.deleteDirectory(appFolder);
+				Log.w(TAG, "Cannot index game; keeping original files: " + appFolder, e);
 			}
 		}
 		return apps;
@@ -86,14 +85,21 @@ public class AppUtils {
 
 	public static AppItem findApp(String name, String vendor, String uid) throws IOException {
 		File appsDir = new File(Config.getAppDir());
-		for (String appFolderName : appsDir.list()) {
+		String[] folders = appsDir.list();
+		if (folders == null) {
+			return null;
+		}
+		for (String appFolderName : folders) {
+			if (appFolderName.startsWith(".")) {
+				continue;
+			}
 			File appDir = new File(appsDir, appFolderName);
 			if (!appDir.isDirectory()) {
 				continue;
 			}
 			File dex = new File(appDir, Config.MIDLET_DEX_FILE);
 			if (!dex.isFile()) {
-				FileUtils.deleteDirectory(appDir);
+				Log.w(TAG, "Skipping game missing converted.dex: " + appDir);
 				continue;
 			}
 			try {
@@ -124,11 +130,8 @@ public class AppUtils {
 	}
 
 	public static void updateDb(AppRepository appRepository, List<AppItem> items) {
-		File tmp = new File(Config.getAppDir(), ".tmp");
-		if (tmp.exists()) {
-			// TODO: 30.07.2021 incomplete installation - maybe can continue?
-			FileUtils.deleteDirectory(tmp);
-		}
+		// Do not delete temporary or incomplete installations while another
+		// install may still be running. A failed conversion must keep diagnostics.
 		String[] appFolders = new File(Config.getAppDir()).list();
 		if (appFolders == null || appFolders.length == 0) {
 			// If db isn't empty
@@ -137,7 +140,12 @@ public class AppUtils {
 			}
 			return;
 		}
-		List<String> appFoldersList = new ArrayList<>(Arrays.asList(appFolders));
+		List<String> appFoldersList = new ArrayList<>();
+		for (String folder : appFolders) {
+			if (!folder.startsWith(".")) {
+				appFoldersList.add(folder);
+			}
+		}
 		// Delete invalid app items from db
 		ListIterator<AppItem> iterator = items.listIterator(items.size());
 		while (iterator.hasPrevious()) {
