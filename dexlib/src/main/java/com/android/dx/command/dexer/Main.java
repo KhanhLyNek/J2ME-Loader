@@ -1391,9 +1391,46 @@ public class Main {
 
         @Override
         public ClassDefItem call() {
-            ClassDefItem clazz = translateClass(bytes, classFile);
-            return clazz;
+            try {
+                return translateClass(bytes, classFile);
+            } catch (RuntimeException firstError) {
+                if (!isJvmStackOverflow(firstError)) {
+                    throw firstError;
+                }
+                // Some obfuscated J2ME methods have stack bounds that DX
+                // cannot simulate after bytecode rewriting. Retry only those
+                // affected classes, so ordinary MIDlets keep original sizing.
+                RuntimeException lastError = firstError;
+                for (int extra : new int[]{8, 32}) {
+                    context.err.println("DX stack-overflow compatibility retry: "
+                            + classFile.getFilePath() + " (+" + extra + " slots)");
+                    byte[] repaired = AndroidProducer.withStackHeadroom(bytes, extra);
+                    DirectClassFile patchedClass = parseClass(classFile.getFilePath(), repaired);
+                    try {
+                        return translateClass(repaired, patchedClass);
+                    } catch (RuntimeException failure) {
+                        if (!isJvmStackOverflow(failure)) {
+                            throw failure;
+                        }
+                        lastError = failure;
+                    }
+                }
+                throw new RuntimeException("Could not translate " + classFile.getFilePath()
+                        + ": stack overflow persists after compatibility retries.", lastError);
+            }
         }
+    }
+
+    private static boolean isJvmStackOverflow(Throwable throwable) {
+        int depth = 0;
+        while (throwable != null && depth++ < 16) {
+            String message = throwable.getMessage();
+            if (message != null && message.contains("stack: overflow")) {
+                return true;
+            }
+            throwable = throwable.getCause();
+        }
+        return false;
     }
 
     /**
