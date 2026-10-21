@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+# One build for the latest commit; older commits on this branch don't
+# need to consume runner resources.
+concurrency:
+  group: external-storage-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
