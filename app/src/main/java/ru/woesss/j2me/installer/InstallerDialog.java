@@ -27,7 +27,6 @@ import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
@@ -158,6 +157,11 @@ public class InstallerDialog extends DialogFragment {
 
 	private void installApp(String path, Uri uri) {
 		installer = new AppInstaller(path, uri, requireActivity().getApplication(), appRepository);
+		installer.setProgressListener(stage -> {
+			if (isAdded() && binding != null) {
+				binding.installationStatus.setText(stage);
+			}
+		});
 		btnClose.setOnClickListener(v -> {
 			installer.deleteTemp();
 			installer.clearCache();
@@ -172,6 +176,11 @@ public class InstallerDialog extends DialogFragment {
 
 	private void reinstallApp(int id) {
 		installer = new AppInstaller(id, requireActivity().getApplication(), appRepository);
+		installer.setProgressListener(stage -> {
+			if (isAdded() && binding != null) {
+				binding.installationStatus.setText(stage);
+			}
+		});
 		btnClose.setOnClickListener(v -> {
 			installer.deleteTemp();
 			installer.clearCache();
@@ -273,10 +282,8 @@ public class InstallerDialog extends DialogFragment {
 		SpannableStringBuilder message;
 		switch (status) {
 			case AppInstaller.STATUS_NEW:
-				if (installer.getJar() != null) {
-					convert();
-					return;
-				}
+				// Show the install confirmation instead of immediately running DX.
+				// Large JARs can take time and should not silently start converting.
 				message = nd.getInfo(requireActivity());
 				break;
 			case AppInstaller.STATUS_OLDEST:
@@ -333,7 +340,17 @@ public class InstallerDialog extends DialogFragment {
 		installer.deleteTemp();
 		if (!isAdded()) return;
 		hideProgress();
-		Toast.makeText(requireActivity(), getString(R.string.error) + ": " + e.getMessage(), Toast.LENGTH_LONG).show();
-		dismissAllowingStateLoss();
+		// Keep the installer open and show an actionable message instead of
+		// dismissing it after a short generic "Dexing error" toast.
+		mDialog.setTitle(R.string.error);
+		String reason = e.getMessage();
+		if (reason == null || reason.isEmpty()) {
+			reason = e.getClass().getSimpleName();
+		}
+		mDialog.setMessage("JAR installation failed:\n" + reason);
+		btnOk.setVisibility(View.GONE);
+		btnRun.setVisibility(View.GONE);
+		btnClose.setText(R.string.close);
+		btnClose.setVisibility(View.VISIBLE);
 	}
 }
