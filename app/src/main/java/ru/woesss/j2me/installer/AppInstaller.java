@@ -295,6 +295,12 @@ public class AppInstaller {
 		} catch (Throwable e) {
 			throw new ConverterException("Dexing error", e);
 		}
+		// Never register a game whose code could not be generated. Otherwise it
+		// appears installed but fails at startup with NoSuchFileException.
+		File convertedDex = new File(tmpDir, Config.MIDLET_DEX_FILE);
+		if (!convertedDex.isFile() || convertedDex.length() == 0) {
+			throw new ConverterException("Dexing failed: converted.dex was not generated for " + srcJar);
+		}
 		if (manifest != null) {
 			manifest.merge(newDesc);
 			newDesc = manifest;
