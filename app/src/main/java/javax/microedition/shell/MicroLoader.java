@@ -30,7 +30,6 @@ import android.view.KeyEvent;
 
 import androidx.core.content.ContextCompat;
 
-import com.android.dx.command.dexer.Main;
 
 import org.acra.ACRA;
 import org.acra.ErrorReporter;
@@ -74,6 +73,8 @@ import ru.playsoftware.j2meloader.config.ProfileModel;
 import ru.playsoftware.j2meloader.config.ProfilesManager;
 import ru.playsoftware.j2meloader.config.ShaderInfo;
 import ru.playsoftware.j2meloader.util.Constants;
+import ru.playsoftware.j2meloader.util.ConverterException;
+import ru.playsoftware.j2meloader.util.DexConverter;
 import ru.playsoftware.j2meloader.util.FileUtils;
 import ru.playsoftware.j2meloader.util.IOUtils;
 import ru.woesss.j2me.jar.Descriptor;
@@ -202,9 +203,8 @@ public class MicroLoader {
 			}
 			Log.w(TAG, "Missing " + dex + ", rebuilding from " + jar);
 			try {
-				Main.main(new String[]{"--no-optimize", "--core-library",
-						"--output=" + pending.getAbsolutePath(), jar.getAbsolutePath()});
-			} catch (Throwable error) {
+				DexConverter.convert(jar, pending);
+			} catch (ConverterException error) {
 				// The converter may raise an Error for malformed bytecode.
 				// Report the underlying problem rather than a generic missing-file crash.
 				//noinspection ResultOfMethodCallIgnored
