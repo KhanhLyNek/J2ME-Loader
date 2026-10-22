@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bg_game_category">Treo game khi tắt màn hình</string>
+    <string name="bg_game_enable_title">Tiếp tục chạy game khi khóa màn hình</string>
+    <string name="bg_game_enable_summary">Bật thủ công. Khi game chạy, ứng dụng hiển thị thông báo thường trực và chỉ giữ CPU hoạt động lúc tắt màn hình. Sẽ tốn thêm pin.</string>
+    <string name="bg_game_duration_title">Thời gian treo tối đa</string>
+    <string name="bg_game_duration_summary">Tự dừng khi hết thời gian để tránh hao pin ngoài ý muốn.</string>
+    <string name="bg_game_eco_title">Chế độ tiết kiệm tối đa (có thể bị ngắt)</string>
+    <string name="bg_game_eco_summary">Không giữ CPU thức. Ít hao pin hơn nhưng Android có thể cho game ngủ hoặc ngắt mạng khi màn hình tắt.</string>
+    <string name="bg_game_battery_title">Cài đặt tối ưu pin</string>
+    <string name="bg_game_battery_summary">Trên HyperOS, hãy cho phép hoạt động nền thủ công nếu game bị ngắt. Doze và giới hạn mạng vẫn có thể ảnh hưởng.</string>
+    <string name="bg_game_notification_channel">Treo game J2ME</string>
+    <string name="bg_game_notification_title">Game J2ME đang chạy nền</string>
+    <string name="bg_game_notification_text">Đang treo khi tắt màn hình. Chạm để quay lại game.</string>
+    <string name="bg_game_notification_stop">Dừng treo game</string>
+    <string name="bg_game_timeout_title">Đã kết thúc treo game</string>
+    <string name="bg_game_timeout_text">Hết thời gian đã chọn; MIDlet đã tạm dừng để tiết kiệm pin.</string>
+    <string-array name="bg_game_durations">
+        <item>15 phút</item>
+        <item>30 phút</item>
+        <item>1 giờ</item>
+        <item>2 giờ</item>
+        <item>4 giờ</item>
+    </string-array>
+    <string-array name="bg_game_duration_values">
+        <item>15</item>
+        <item>30</item>
+        <item>60</item>
+        <item>120</item>
+        <item>240</item>
+    </string-array>
+</resources>
