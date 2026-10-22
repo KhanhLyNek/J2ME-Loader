@@ -152,6 +152,9 @@ public abstract class Canvas extends Displayable {
 	private int displayHeight;
 	private boolean fullscreen;
 	private boolean visible;
+	// Preserve J2ME showNotify/isShown while Android removes the Surface
+	// for an explicitly enabled background MIDlet session.
+	private boolean virtualSurfaceRetainedForBackground;
 	private boolean sizeChangedCalled;
 	private Image offscreen;
 	private Image offscreenCopy;
@@ -938,8 +941,13 @@ public abstract class Canvas extends Displayable {
 			} catch (Throwable e) {
 				Log.e(TAG, "Error in paint()", e);
 			}
-			synchronized (bufferLock) {
-				offscreen.copyTo(offscreenCopy);
+			// Keep paint callbacks (often used as game ticks), but avoid
+			// copying whole video frames into the screen presentation buffer
+			// while Android's display is off.
+			if (!BackgroundGameService.shouldSkipScreenOutput()) {
+				synchronized (bufferLock) {
+					offscreen.copyTo(offscreenCopy);
+				}
 			}
 			if (surface == null || !surface.isValid()) {
 				return;
@@ -1208,7 +1216,10 @@ public abstract class Canvas extends Displayable {
 				renderer.start();
 			}
 			surface = holder.getSurface();
-			Display.postEvent(CanvasEvent.getInstance(Canvas.this, CanvasEvent.SHOW_NOTIFY));
+			if (!virtualSurfaceRetainedForBackground || !visible) {
+				Display.postEvent(CanvasEvent.getInstance(Canvas.this, CanvasEvent.SHOW_NOTIFY));
+			}
+			virtualSurfaceRetainedForBackground = false;
 			repaintInternal();
 			if (showFps) {
 				fpsCounter = new FpsCounter(overlayView);
@@ -1230,7 +1241,15 @@ public abstract class Canvas extends Displayable {
 			synchronized (surfaceLock) {
 				surface = null;
 			}
-			Display.postEvent(CanvasEvent.getInstance(Canvas.this, CanvasEvent.HIDE_NOTIFY));
+			if (BackgroundGameService.keepsMidletRunning() && visible) {
+				// Surface destruction is a display power operation, not a
+				// MIDlet pause. Preserve the logical Canvas visibility so
+				// games using isShown()/hideNotify() can keep processing.
+				virtualSurfaceRetainedForBackground = true;
+			} else {
+				virtualSurfaceRetainedForBackground = false;
+				Display.postEvent(CanvasEvent.getInstance(Canvas.this, CanvasEvent.HIDE_NOTIFY));
+			}
 			if (fpsCounter != null) {
 				fpsCounter.stop();
 				overlayView.removeLayer(fpsCounter);
