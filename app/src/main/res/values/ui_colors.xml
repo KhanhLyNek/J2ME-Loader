@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ui_bg_start">#EAF3FF</color><color name="ui_bg_middle">#F6F8FF</color><color name="ui_bg_end">#ECEBFA</color>
+    <color name="ui_bg_solid">#F0F5FD</color><color name="ui_toolbar">#34466D</color><color name="ui_status">#233453</color>
+    <color name="ui_text">#192745</color><color name="ui_muted">#647493</color><color name="ui_hint">#8896AF</color>
+    <color name="ui_accent">#5264DC</color><color name="ui_accent2">#1AA6B2</color>
+    <color name="ui_button">#5264DC</color><color name="ui_button_pressed">#3D4FAF</color><color name="ui_button_text">#FFFFFFFF</color>
+    <color name="ui_glass_top">#F5FFFFFF</color><color name="ui_glass_middle">#E4FFFFFF</color><color name="ui_glass_end">#DDF0F6FF</color>
+    <color name="ui_glass_stroke">#CCFFFFFF</color>
+    <color name="ui_hero_start">#DAE5EEFF</color><color name="ui_hero_end">#E5EEEAFF</color>
+    <color name="ui_hero_stroke">#B8FFFFFF</color><color name="ui_orb_center">#586F8BF5</color><color name="ui_orb_edge">#006F8BF5</color>
+    <color name="ui_input">#E7FFFFFF</color><color name="ui_input_stroke">#95B9CBEE</color>
+    <color name="ui_dialog">#FFF6FAFF</color><color name="ui_icon_back">#D8E2ECFF</color>
+</resources>
