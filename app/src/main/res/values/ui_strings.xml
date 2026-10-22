@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_brand">J2ME • RETRO</string>
+    <string name="ui_eyebrow">YOUR POCKET ARCADE</string>
+    <string name="ui_library_title">Your game library</string>
+    <string name="ui_library_caption">Small screen. Big memories.</string>
+    <string name="ui_installed">GAMES INSTALLED</string>
+    <string name="ui_collection_title">Your collection</string>
+    <string name="ui_tap_to_play">TAP TO PLAY</string>
+    <string name="ui_add_game">Import a game</string>
+    <string name="ui_empty_title">Ready for your first adventure?</string>
+    <string name="ui_install_heading">Install Java game</string>
+    <string name="ui_install_caption">Preparing your JAR for J2ME Loader</string>
+    <string name="ui_profiles_caption">Save and reuse your favorite game settings</string>
+</resources>

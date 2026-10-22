@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_brand">J2ME • RETRO</string>
+    <string name="ui_eyebrow">THẾ GIỚI GAME TRONG TÚI BẠN</string>
+    <string name="ui_library_title">Thư viện game</string>
+    <string name="ui_library_caption">Màn hình nhỏ, ký ức lớn.</string>
+    <string name="ui_installed">GAME ĐÃ CÀI ĐẶT</string>
+    <string name="ui_collection_title">Bộ sưu tập của bạn</string>
+    <string name="ui_tap_to_play">CHẠM ĐỂ CHƠI</string>
+    <string name="ui_add_game">Thêm game</string>
+    <string name="ui_empty_title">Sẵn sàng cho chuyến phiêu lưu đầu tiên?</string>
+    <string name="ui_install_heading">Cài đặt game Java</string>
+    <string name="ui_install_caption">Đang chuẩn bị JAR cho J2ME Loader</string>
+    <string name="ui_profiles_caption">Lưu và sử dụng lại cấu hình game yêu thích</string>
+</resources>
