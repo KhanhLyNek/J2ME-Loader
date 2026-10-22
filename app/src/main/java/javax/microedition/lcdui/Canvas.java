@@ -73,6 +73,7 @@ import javax.microedition.lcdui.overlay.Layer;
 import javax.microedition.lcdui.overlay.Overlay;
 import javax.microedition.lcdui.overlay.OverlayView;
 import javax.microedition.shell.MicroActivity;
+import javax.microedition.shell.BackgroundGameService;
 import javax.microedition.util.ContextHolder;
 
 import io.reactivex.Single;
@@ -1248,6 +1249,12 @@ public abstract class Canvas extends Displayable {
 	}
 
 	private void requestFlushToScreen() {
+		// The MIDlet still receives its paint callbacks for compatibility,
+		// but do not spend GPU / surface work on frames no one can see.
+		// This intentionally does not lower the game's simulation tick.
+		if (BackgroundGameService.shouldSkipScreenOutput()) {
+			return;
+		}
 		if (graphicsMode == 1) {
 			if (innerView != null) {
 				renderer.requestRender();
