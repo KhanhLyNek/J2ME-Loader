@@ -97,6 +97,13 @@ public class MidletThread extends HandlerThread implements Handler.Callback {
 			instance.handler.obtainMessage(START).sendToTarget();
 	}
 
+	/** Called only after a user-enabled foreground service is active. */
+	static void resumeForBackground() {
+		if (instance != null && BackgroundGameService.keepsMidletRunning()) {
+			instance.handler.obtainMessage(START).sendToTarget();
+		}
+	}
+
 	static void destroyApp() {
 		Thread.setDefaultUncaughtExceptionHandler(uncaughtExceptionHandler);
 		new Thread(() -> {
