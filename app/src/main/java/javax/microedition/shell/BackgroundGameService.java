@@ -328,7 +328,11 @@ public final class BackgroundGameService extends Service {
         if (activity == null || !activity.isVisible()) {
             MidletThread.pauseApp();
         }
-        stopForeground(STOP_FOREGROUND_REMOVE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+        } else {
+            stopForeground(true);
+        }
         stopSelf();
         if (expired) {
             NotificationManager manager =
@@ -341,7 +345,11 @@ public final class BackgroundGameService extends Service {
                         .setAutoCancel(true)
                         .setPriority(NotificationCompat.PRIORITY_LOW)
                         .build();
-                manager.notify(TIMEOUT_NOTIFICATION_ID, done);
+                try {
+                    manager.notify(TIMEOUT_NOTIFICATION_ID, done);
+                } catch (SecurityException denied) {
+                    Log.w(TAG, "Couldn't show timeout notification", denied);
+                }
             }
         }
     }
