@@ -29,4 +29,5 @@
         <item>120</item>
         <item>240</item>
     </string-array>
+    <string name="bg_game_notification_permission">Hãy cấp quyền thông báo để có nút Dừng treo game an toàn.</string>
 </resources>
