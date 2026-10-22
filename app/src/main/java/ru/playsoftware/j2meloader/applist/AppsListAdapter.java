@@ -18,8 +18,11 @@
 
 package ru.playsoftware.j2meloader.applist;
 
+import android.animation.ValueAnimator;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Filter;
@@ -88,6 +91,14 @@ class AppsListAdapter extends ListAdapter<AppItem, AppsListAdapter.AppViewHolder
 	@Override
 	public void onBindViewHolder(@NonNull AppViewHolder holder, int position) {
 		holder.onBind(getItem(position));
+		if (holder.firstBind && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O
+				|| ValueAnimator.areAnimatorsEnabled())) {
+			holder.firstBind = false;
+			View card = holder.itemView;
+			card.setAlpha(0f);
+			card.setTranslationY(12f * card.getResources().getDisplayMetrics().density);
+			card.animate().alpha(1f).translationY(0f).setDuration(250L).start();
+		}
 	}
 
 	void setItems(List<AppItem> items) {
@@ -111,6 +122,7 @@ class AppsListAdapter extends ListAdapter<AppItem, AppsListAdapter.AppViewHolder
 	static class AppViewHolder extends RecyclerView.ViewHolder {
 		private final ImageView icon;
 		private final TextView name;
+		private boolean firstBind = true;
 
 		AppViewHolder(ListRowGridJarBinding binding, View.OnCreateContextMenuListener contextMenuListener) {
 			this(binding.getRoot(), binding.listTitle, binding.listImage, contextMenuListener);
@@ -126,10 +138,26 @@ class AppsListAdapter extends ListAdapter<AppItem, AppsListAdapter.AppViewHolder
 
 			itemView.setOnClickListener(v -> {
 				AppsListAdapter adapter = (AppsListAdapter) getBindingAdapter();
-				if (adapter != null) {
-					AppItem item = adapter.getItem(getLayoutPosition());
+				int position = getBindingAdapterPosition();
+				if (adapter != null && position != RecyclerView.NO_POSITION) {
+					AppItem item = adapter.getItem(position);
 					Config.startApp(v.getContext(), item.getTitle(), item.getPathExt(), false);
 				}
+			});
+			itemView.setOnTouchListener((v, e) -> {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !ValueAnimator.areAnimatorsEnabled()) {
+					return false;
+				}
+				switch (e.getActionMasked()) {
+					case MotionEvent.ACTION_DOWN:
+						v.animate().scaleX(0.975f).scaleY(0.975f).setDuration(90L).start();
+						break;
+					case MotionEvent.ACTION_UP:
+					case MotionEvent.ACTION_CANCEL:
+						v.animate().scaleX(1f).scaleY(1f).setDuration(130L).start();
+						break;
+				}
+				return false; // keep click + long-press/context menu intact
 			});
 			itemView.setOnCreateContextMenuListener(contextMenuListener);
 		}

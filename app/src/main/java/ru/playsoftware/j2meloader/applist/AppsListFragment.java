@@ -25,6 +25,7 @@ import static ru.playsoftware.j2meloader.util.Constants.PREF_APP_SORT;
 import static ru.playsoftware.j2meloader.util.Constants.PREF_LAST_PATH;
 
 import android.annotation.SuppressLint;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.ActivityNotFoundException;
@@ -38,6 +39,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -70,7 +72,6 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.preference.PreferenceManager;
-import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.GridLayoutManager;
 
 import java.io.File;
@@ -110,7 +111,6 @@ public class AppsListFragment extends Fragment implements MenuProvider {
 	private Disposable searchViewDisposable;
 	private GridLayoutManager layoutManager;
 	private FragmentAppsListBinding binding;
-	private DividerItemDecoration itemDecoration;
 
 	public static AppsListFragment newInstance(Uri data) {
 		AppsListFragment fragment = new AppsListFragment();
@@ -150,21 +150,21 @@ public class AppsListFragment extends Fragment implements MenuProvider {
 		int viewType = preferences.getInt(PREF_APPS_VIEW, AppsListAdapter.LAYOUT_TYPE_GRID);
 		int spanCount;
 		if (viewType == AppsListAdapter.LAYOUT_TYPE_GRID) {
-			spanCount = getResources().getConfiguration().screenWidthDp / 90;
+			spanCount = getGridColumns(getResources().getConfiguration().screenWidthDp);
 		} else {
 			spanCount = 1;
-			itemDecoration = new DividerItemDecoration(view.getContext(), DividerItemDecoration.VERTICAL);
-			binding.list.addItemDecoration(itemDecoration);
 		}
 		adapter.setLayout(viewType);
 		layoutManager = new GridLayoutManager(requireContext(), spanCount);
 		requireActivity().addOnConfigurationChangedListener(configuration -> {
 			if (adapter.getItemViewType(0) == AppsListAdapter.LAYOUT_TYPE_GRID) {
-				layoutManager.setSpanCount(configuration.screenWidthDp / 90);
+				layoutManager.setSpanCount(getGridColumns(configuration.screenWidthDp));
 			}
 		});
 		binding.list.setLayoutManager(layoutManager);
 		binding.list.setAdapter(adapter);
+		binding.list.setHasFixedSize(true);
+		animateLibraryEntrance();
 		binding.floatingActionButton.setOnClickListener(v -> {
 			String path = preferences.getString(PREF_LAST_PATH, null);
 			if (path == null) {
@@ -180,6 +180,28 @@ public class AppsListFragment extends Fragment implements MenuProvider {
 				e.printStackTrace();
 			}
 		});
+	}
+
+	private int getGridColumns(int widthDp) {
+		// Spacious tiles instead of the old 90dp-wide icons.
+		return Math.max(2, widthDp / 174);
+	}
+
+	private void animateLibraryEntrance() {
+		// Keep effects on the UI only; none run inside the game renderer.
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !ValueAnimator.areAnimatorsEnabled()) {
+			return;
+		}
+		float displacement = 16f * getResources().getDisplayMetrics().density;
+		binding.uiHeader.setAlpha(0f);
+		binding.uiHeader.setTranslationY(displacement);
+		binding.uiHeader.animate().alpha(1f).translationY(0f)
+				.setDuration(340L).start();
+		binding.floatingActionButton.setAlpha(0f);
+		binding.floatingActionButton.setScaleX(0.85f);
+		binding.floatingActionButton.setScaleY(0.85f);
+		binding.floatingActionButton.animate().alpha(1f).scaleX(1f).scaleY(1f)
+				.setStartDelay(160L).setDuration(280L).start();
 	}
 
 	private void alertDbError(Throwable throwable) {
@@ -392,16 +414,9 @@ public class AppsListFragment extends Fragment implements MenuProvider {
 			}
 			int spanCount;
 			if (viewType == AppsListAdapter.LAYOUT_TYPE_GRID) {
-				spanCount = getResources().getConfiguration().screenWidthDp / 90;
-				if (itemDecoration != null) {
-					binding.list.removeItemDecoration(itemDecoration);
-				}
+				spanCount = getGridColumns(getResources().getConfiguration().screenWidthDp);
 			} else {
 				spanCount = 1;
-				if (itemDecoration == null) {
-					itemDecoration = new DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL);
-				}
-				binding.list.addItemDecoration(itemDecoration);
 			}
 			layoutManager.setSpanCount(spanCount);
 			adapter.setLayout(viewType);
@@ -431,6 +446,9 @@ public class AppsListFragment extends Fragment implements MenuProvider {
 
 	private void onDbUpdated(List<AppItem> items) {
 		adapter.setItems(items);
+		if (binding != null) {
+			binding.uiGamesCount.setText(String.valueOf(items.size()));
+		}
 		if (appUri != null) {
 			InstallerDialog.newInstance(appUri).show(getParentFragmentManager(), "installer");
 			appUri = null;
@@ -467,6 +485,10 @@ public class AppsListFragment extends Fragment implements MenuProvider {
 
 	@Override
 	public void onDestroyView() {
+		if (binding != null) {
+			binding.uiHeader.animate().cancel();
+			binding.floatingActionButton.animate().cancel();
+		}
 		super.onDestroyView();
 		binding = null;
 	}
