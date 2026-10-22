@@ -84,36 +84,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: |
-            set -e
-            APK="$(find app/build/outputs/apk/dev/debug -name '*.apk' -print -quit)"
-            test -f "$APK"
-            PKG="ru.playsoftware.j2meloader.debug"
-            adb install -r "$APK"
-            # Shared-directory permission is special app access, not a
-            # runtime dangerous permission.
-            adb shell appops set "$PKG" MANAGE_EXTERNAL_STORAGE allow || true
-            for MODE in yes no; do
-              adb shell cmd uimode night "$MODE"
-              adb shell am force-stop "$PKG"
-              adb logcat -c
-              adb shell am start -W -n "$PKG/ru.playsoftware.j2meloader.MainActivity"
-              sleep 12
-              if [ -z "$(adb shell pidof "$PKG" | tr -d '\r')" ]; then
-                echo "App process died on startup in night mode=$MODE"
-                adb logcat -d -v brief | tail -n 180
-                exit 1
-              fi
-              if adb logcat -d -v threadtime | grep -A 15 'FATAL EXCEPTION' | grep -q "Process: $PKG"; then
-                echo "FATAL EXCEPTION during launch, night mode=$MODE"
-                adb logcat -d -v brief | tail -n 180
-                exit 1
-              fi
-              echo "Launcher alive: night mode=$MODE"
-              mkdir -p ui-smoke
-              adb shell screencap -p "/sdcard/ui_home_$MODE.png"
-              adb pull "/sdcard/ui_home_$MODE.png" "ui-smoke/ui_home_$MODE.png"
-            done
+          script: bash .github/scripts/ui-smoke.sh
 
       - name: Upload UI preview screenshots
         if: always() && github.ref == 'refs/heads/feature/ui-full-redesign'
