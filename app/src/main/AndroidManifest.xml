@@ -50,6 +50,7 @@
         tools:ignore="RtlEnabled">
         <activity
             android:name=".MainActivity"
+            android:theme="@style/AppTheme.ManagedUi"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:exported="true"
             android:launchMode="singleTask">
@@ -121,6 +122,7 @@
         </activity>
         <activity
             android:name=".config.ConfigActivity"
+            android:theme="@style/AppTheme.ManagedUi"
             android:exported="true"
             android:windowSoftInputMode="stateHidden" />
         <activity
@@ -142,6 +144,7 @@
         </service>
 
         <activity android:name=".settings.SettingsActivity"
+            android:theme="@style/AppTheme.ManagedUi"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
@@ -149,12 +152,16 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <activity android:name=".settings.KeyMapperActivity" android:exported="false" />
+        <activity android:name=".settings.KeyMapperActivity"
+            android:theme="@style/AppTheme.ManagedUi"
+            android:exported="false" />
         <activity
             android:name=".filepicker.FilteredFilePickerActivity"
             android:exported="false"
             android:theme="@style/FilePickerTheme" />
-        <activity android:name=".config.ProfilesActivity" android:exported="false" />
+        <activity android:name=".config.ProfilesActivity"
+            android:theme="@style/AppTheme.ManagedUi"
+            android:exported="false" />
         <provider
             android:name=".storage.DocumentProvider"
             android:authorities="${applicationId}.documentProvider"
