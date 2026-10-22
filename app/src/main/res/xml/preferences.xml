@@ -40,6 +40,30 @@
         android:icon="@drawable/ic_setting_keep_screen_on"
         android:key="pref_wakelock_switch"
         android:title="@string/pref_wakelock_title" />
+    <PreferenceCategory android:title="@string/bg_game_category">
+        <SwitchPreferenceCompat
+            android:key="pref_background_game_enabled"
+            android:defaultValue="false"
+            android:title="@string/bg_game_enable_title"
+            android:summary="@string/bg_game_enable_summary" />
+        <ListPreference
+            android:key="pref_background_game_minutes"
+            android:defaultValue="60"
+            android:entries="@array/bg_game_durations"
+            android:entryValues="@array/bg_game_duration_values"
+            android:title="@string/bg_game_duration_title"
+            app:useSimpleSummaryProvider="true" />
+        <SwitchPreferenceCompat
+            android:key="pref_background_game_eco"
+            android:defaultValue="false"
+            android:title="@string/bg_game_eco_title"
+            android:summary="@string/bg_game_eco_summary" />
+        <Preference
+            android:key="pref_background_battery_settings"
+            android:title="@string/bg_game_battery_title"
+            android:summary="@string/bg_game_battery_summary" />
+    </PreferenceCategory>
+
     <SwitchPreferenceCompat
         android:defaultValue="false"
         android:icon="@drawable/ic_setting_screenshot"
