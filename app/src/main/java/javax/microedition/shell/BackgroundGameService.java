@@ -276,6 +276,7 @@ public final class BackgroundGameService extends Service {
                 Log.e(TAG, "Cannot acquire CPU wake lock; continuing in Eco mode", error);
             }
         }
+        MidletThread.resumeForBackground();
         Log.i(TAG, "Screen off: game running in " + (eco ? "Eco" : "CPU awake")
                 + " mode, limit " + (maxScreenOffMillis / 60000L) + " min");
     }
@@ -285,6 +286,12 @@ public final class BackgroundGameService extends Service {
         screenOffStartedAt = 0L;
         handler.removeCallbacks(onTimeout);
         releaseCpuLock();
+        // Do not burn CPU in a game hidden behind the lock screen or
+        // another app after the user wakes the display.
+        MicroActivity activity = javax.microedition.util.ContextHolder.getActivity();
+        if (activity != null && !activity.isVisible()) {
+            MidletThread.pauseApp();
+        }
     }
 
     private void releaseCpuLock() {
