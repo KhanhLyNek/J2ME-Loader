@@ -12,4 +12,7 @@
     <string name="ui_install_heading">Cài đặt game Java</string>
     <string name="ui_install_caption">Đang chuẩn bị JAR cho J2ME Loader</string>
     <string name="ui_profiles_caption">Lưu và sử dụng lại cấu hình game yêu thích</string>
+    <string name="ui_pref_appearance">Giao diện</string>
+    <string name="ui_pref_runtime">Điều khiển và hiển thị game</string>
+    <string name="ui_pref_storage">Cấu hình và lưu trữ</string>
 </resources>

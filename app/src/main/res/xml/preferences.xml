@@ -2,6 +2,7 @@
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
+    <PreferenceCategory android:title="@string/ui_pref_appearance">
     <ListPreference
         android:defaultValue="@string/pref_theme_default"
         android:entries="@array/pref_theme_entries"
@@ -35,11 +36,27 @@
         android:title="@string/pref_add_cutout_area_title"
         app:isPreferenceVisible="false"
         tools:isPreferenceVisible="true" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/ui_pref_runtime">
     <SwitchPreferenceCompat
         android:defaultValue="false"
         android:icon="@drawable/ic_setting_keep_screen_on"
         android:key="pref_wakelock_switch"
         android:title="@string/pref_wakelock_title" />
+
+
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:icon="@drawable/ic_setting_screenshot"
+        android:key="pref_screenshot_switch"
+        android:title="@string/pref_screenshot_title"
+        android:summary="@string/pref_screenshot_summary"/>
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:icon="@drawable/ic_setting_enable_vibration"
+        android:key="pref_vibration_switch"
+        android:title="@string/pref_vibration_title" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="@string/bg_game_category">
         <SwitchPreferenceCompat
             android:key="pref_background_game_enabled"
@@ -64,17 +81,7 @@
             android:summary="@string/bg_game_battery_summary" />
     </PreferenceCategory>
 
-    <SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:icon="@drawable/ic_setting_screenshot"
-        android:key="pref_screenshot_switch"
-        android:title="@string/pref_screenshot_title"
-        android:summary="@string/pref_screenshot_summary"/>
-    <SwitchPreferenceCompat
-        android:defaultValue="true"
-        android:icon="@drawable/ic_setting_enable_vibration"
-        android:key="pref_vibration_switch"
-        android:title="@string/pref_vibration_title" />
+    <PreferenceCategory android:title="@string/ui_pref_storage">
     <Preference
         android:key="pref_default_settings"
         android:icon="@drawable/ic_setting_default"
@@ -84,6 +91,7 @@
         android:icon="@drawable/ic_setting_folder"
         android:title="@string/pref_emulator_dir"
         tools:summary="/sdcard/J2ME-Loader" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="@string/pref_category_experimental">
         <SwitchPreferenceCompat
             android:key="micro3d_using_message"

@@ -25,6 +25,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.graphics.Color;
+import android.view.View;
 import android.provider.Settings;
 import android.widget.Toast;
 import android.provider.DocumentsContract;
@@ -35,6 +37,9 @@ import androidx.core.content.ContextCompat;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.preference.SwitchPreferenceCompat;
 
 import java.io.File;
@@ -107,6 +112,16 @@ public class SettingsFragment extends PreferenceFragmentCompat {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
 			findPreference(PREF_ADD_CUTOUT_AREA).setVisible(true);
 		}
+	}
+
+	@Override
+	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+		super.onViewCreated(view, savedInstanceState);
+		RecyclerView list = getListView();
+		int gutter = Math.round(12 * getResources().getDisplayMetrics().density);
+		list.setBackgroundColor(Color.TRANSPARENT);
+		list.setClipToPadding(false);
+		list.setPadding(gutter, 0, gutter, gutter);
 	}
 
 	private void openPicker() {

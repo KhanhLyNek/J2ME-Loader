@@ -12,4 +12,7 @@
     <string name="ui_install_heading">Install Java game</string>
     <string name="ui_install_caption">Preparing your JAR for J2ME Loader</string>
     <string name="ui_profiles_caption">Save and reuse your favorite game settings</string>
+    <string name="ui_pref_appearance">Appearance</string>
+    <string name="ui_pref_runtime">Game controls and display</string>
+    <string name="ui_pref_storage">Profiles and storage</string>
 </resources>
