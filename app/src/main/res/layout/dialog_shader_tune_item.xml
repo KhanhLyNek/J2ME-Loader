@@ -18,7 +18,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:paddingTop="7dp"
+    android:paddingBottom="7dp">
 
     <TextView
         android:id="@+id/shader_setting_name"
@@ -28,7 +30,7 @@
         android:paddingLeft="10dp"
         android:paddingEnd="10dp"
         android:paddingRight="10dp"
-        android:textColor="?attr/textColorSecondary"
+        android:textColor="@color/ui_text"
         android:textSize="15sp"
         tools:text="ShaderSetting1:" />
 
