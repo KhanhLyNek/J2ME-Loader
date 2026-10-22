@@ -33,6 +33,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -219,7 +220,12 @@ public class MicroActivity extends AppCompatActivity {
 		// Never pause an opted-in MIDlet while its notification-backed
 		// foreground session is active. If the service is denied/stopped,
 		// preserve the normal pause behavior as a safe fallback.
-		if (!BackgroundGameService.keepsMidletRunning()) {
+		PowerManager power = (PowerManager) getSystemService(POWER_SERVICE);
+		boolean interactive = power != null && power.isInteractive();
+		// If the user switches to another app with the screen still on,
+		// pause the MIDlet and save CPU. A later SCREEN_OFF broadcast resumes
+		// it for the opted-in session.
+		if (!BackgroundGameService.keepsMidletRunning() || interactive) {
 			MidletThread.pauseApp();
 		}
 		super.onPause();
