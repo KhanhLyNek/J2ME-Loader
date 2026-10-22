@@ -1,46 +1,53 @@
-<?xml version= "1.0" encoding = "utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <ru.playsoftware.j2meloader.applist.AppItemLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="fill_parent"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginStart="5dp"
+    android:layout_marginTop="5dp"
+    android:layout_marginEnd="5dp"
+    android:layout_marginBottom="5dp"
+    android:background="@drawable/ui_glass_card"
+    android:foreground="?attr/selectableItemBackground"
     android:gravity="center_vertical"
+    android:minHeight="90dp"
     android:orientation="horizontal"
-    android:background="?android:selectableItemBackground"
-    android:padding="10dp"
+    android:padding="13dp"
     android:focusable="true"
     tools:showIn="@layout/fragment_apps_list">
 
     <ImageView
         android:id="@+id/list_image"
-        android:layout_width="36dip"
-        android:layout_height="36dip"
-        android:layout_marginEnd="10dp"
-        android:layout_marginRight="10dp"
-        android:scaleType="centerCrop"
-        tools:src="@mipmap/ic_launcher" />
+        android:layout_width="58dp"
+        android:layout_height="58dp"
+        android:background="@drawable/ui_icon_back"
+        android:padding="9dp"
+        android:scaleType="fitCenter"
+        tools:src="@mipmap/ic_launcher"/>
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
         <TextView
             android:id="@+id/list_title"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="?android:textAppearance"
-            android:textSize="15sp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="@color/ui_text"
+            android:textSize="16sp"
             android:textStyle="bold"
-            tools:text="Example MIDlet Name" />
+            tools:text="Retro Adventure"/>
 
-        <!-- Author and version app -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="6dp"
             android:orientation="horizontal">
 
             <TextView
@@ -49,21 +56,28 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:ellipsize="end"
                 android:maxLines="1"
-                android:textAppearance="?android:textAppearance"
-                android:textColor="?textColorSecondary"
+                android:textColor="@color/ui_muted"
                 android:textSize="12sp"
-                tools:text="Example MIDlet Vendor Ltd." />
+                tools:text="Classic Studio"/>
 
             <TextView
                 android:id="@+id/list_version"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textAppearance="?android:textAppearance"
-                android:textColor="?textColorSecondary"
+                android:layout_marginStart="7dp"
+                android:maxLines="1"
+                android:textColor="@color/ui_muted"
                 android:textSize="12sp"
-                tools:text="1.0.254" />
+                tools:text="1.0.2"/>
         </LinearLayout>
     </LinearLayout>
 
+    <ImageView
+        android:layout_width="25dp"
+        android:layout_height="25dp"
+        android:layout_marginStart="10dp"
+        android:contentDescription="@null"
+        android:src="@drawable/ui_icon_play"/>
 </ru.playsoftware.j2meloader.applist.AppItemLayout>
