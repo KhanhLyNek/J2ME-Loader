@@ -184,6 +184,10 @@ public class MicroActivity extends AppCompatActivity {
 		menuKey = microLoader.getMenuKeyCode();
 		inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
 
+		// Start while this activity is foreground; Android 12+ disallows
+		// ordinary apps starting foreground services from the background.
+		// No service is started unless the user opted in via Settings.
+		BackgroundGameService.startForGame(this, appName, appPath);
 		try {
 			loadMIDlet();
 		} catch (Exception e) {
@@ -212,7 +216,12 @@ public class MicroActivity extends AppCompatActivity {
 	public void onPause() {
 		visible = false;
 		hideSoftInput();
-		MidletThread.pauseApp();
+		// Never pause an opted-in MIDlet while its notification-backed
+		// foreground session is active. If the service is denied/stopped,
+		// preserve the normal pause behavior as a safe fallback.
+		if (!BackgroundGameService.keepsMidletRunning()) {
+			MidletThread.pauseApp();
+		}
 		super.onPause();
 	}
 
@@ -691,6 +700,12 @@ public class MicroActivity extends AppCompatActivity {
 
 	@Override
 	protected void onDestroy() {
+		// The runtime and its foreground service share the :midlet process.
+		// Stop the service when the game activity is truly ending, but
+		// avoid doing so during a configuration-only recreation.
+		if (!isChangingConfigurations()) {
+			BackgroundGameService.stopForGame(this);
+		}
 		binding = null;
 		super.onDestroy();
 	}
