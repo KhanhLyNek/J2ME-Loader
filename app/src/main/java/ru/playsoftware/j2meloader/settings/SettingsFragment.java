@@ -23,6 +23,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.provider.DocumentsContract;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -39,6 +40,7 @@ import ru.playsoftware.j2meloader.util.FileUtils;
 import ru.playsoftware.j2meloader.util.PickDirResultContract;
 
 import static ru.playsoftware.j2meloader.util.Constants.PREF_ADD_CUTOUT_AREA;
+import static ru.playsoftware.j2meloader.util.Constants.PREF_BACKGROUND_GAME_ENABLED;
 
 public class SettingsFragment extends PreferenceFragmentCompat {
 	private Preference prefFolder;
@@ -58,6 +60,19 @@ public class SettingsFragment extends PreferenceFragmentCompat {
 			}
 			return true;
 		});
+		Preference batterySettings = findPreference("pref_background_battery_settings");
+		if (batterySettings != null) {
+			batterySettings.setOnPreferenceClickListener(pref -> {
+				Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+				try {
+					startActivity(intent);
+				} catch (ActivityNotFoundException e) {
+					startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+						Uri.parse("package:" + requireContext().getPackageName())));
+				}
+				return true;
+			});
+		}
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
 			findPreference(PREF_ADD_CUTOUT_AREA).setVisible(true);
 		}
