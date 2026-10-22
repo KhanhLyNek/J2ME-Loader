@@ -110,4 +110,15 @@ jobs:
                 exit 1
               fi
               echo "Launcher alive: night mode=$MODE"
+              mkdir -p ui-smoke
+              adb shell screencap -p "/sdcard/ui_home_$MODE.png"
+              adb pull "/sdcard/ui_home_$MODE.png" "ui-smoke/ui_home_$MODE.png"
             done
+
+      - name: Upload UI preview screenshots
+        if: always() && github.ref == 'refs/heads/feature/ui-full-redesign'
+        uses: actions/upload-artifact@v4
+        with:
+          name: J2ME-UI-Light-Dark-Previews
+          path: ui-smoke/*.png
+          if-no-files-found: warn
