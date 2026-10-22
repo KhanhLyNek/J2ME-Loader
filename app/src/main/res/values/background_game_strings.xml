@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bg_game_category">Background game / screen off</string>
+    <string name="bg_game_enable_title">Keep game running with screen off</string>
+    <string name="bg_game_enable_summary">Opt in to a visible foreground notification while a MIDlet is running. CPU stays awake only when the screen turns off. Uses additional battery.</string>
+    <string name="bg_game_duration_title">Maximum screen-off session</string>
+    <string name="bg_game_duration_summary">The session ends automatically to prevent accidental battery drain.</string>
+    <string name="bg_game_eco_title">Eco mode (may suspend the game)</string>
+    <string name="bg_game_eco_summary">Avoid the CPU wake lock. Uses less battery, but Android may freeze the game or pause its network connection while the screen is off.</string>
+    <string name="bg_game_battery_title">Battery optimization settings</string>
+    <string name="bg_game_battery_summary">On HyperOS, allow background activity manually if the game disconnects. Android Doze and network policies can still limit operation.</string>
+    <string name="bg_game_notification_channel">Background MIDlet</string>
+    <string name="bg_game_notification_title">J2ME game running in background</string>
+    <string name="bg_game_notification_text">Screen-off session is active. Tap to return to the game.</string>
+    <string name="bg_game_notification_stop">Stop background mode</string>
+    <string name="bg_game_timeout_title">Background session ended</string>
+    <string name="bg_game_timeout_text">Time limit reached. MIDlet paused to save battery.</string>
+    <string-array name="bg_game_durations">
+        <item>15 minutes</item>
+        <item>30 minutes</item>
+        <item>1 hour</item>
+        <item>2 hours</item>
+        <item>4 hours</item>
+    </string-array>
+    <string-array name="bg_game_duration_values">
+        <item>15</item>
+        <item>30</item>
+        <item>60</item>
+        <item>120</item>
+        <item>240</item>
+    </string-array>
+</resources>
