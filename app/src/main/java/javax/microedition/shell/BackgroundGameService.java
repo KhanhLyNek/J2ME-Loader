@@ -329,7 +329,7 @@ public final class BackgroundGameService extends Service {
             if (manager != null) {
                 Notification done = new NotificationCompat.Builder(this, CHANNEL_ID)
                         .setSmallIcon(android.R.drawable.ic_dialog_info)
-                        .setContentTitle(R.string.bg_game_timeout_title)
+                        .setContentTitle(getString(R.string.bg_game_timeout_title))
                         .setContentText(getString(R.string.bg_game_timeout_text))
                         .setAutoCancel(true)
                         .setPriority(NotificationCompat.PRIORITY_LOW)
