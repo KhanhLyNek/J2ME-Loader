@@ -18,18 +18,24 @@ package ru.playsoftware.j2meloader.settings;
 
 import static ru.playsoftware.j2meloader.util.Constants.PREF_EMULATOR_DIR;
 
+import android.Manifest;
 import android.content.ActivityNotFoundException;
+import android.content.pm.PackageManager;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.widget.Toast;
 import android.provider.DocumentsContract;
 
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.core.content.ContextCompat;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.SwitchPreferenceCompat;
 
 import java.io.File;
 
@@ -44,6 +50,16 @@ import static ru.playsoftware.j2meloader.util.Constants.PREF_BACKGROUND_GAME_ENA
 
 public class SettingsFragment extends PreferenceFragmentCompat {
 	private Preference prefFolder;
+	private final ActivityResultLauncher<String> notificationsLauncher =
+			registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+				if (granted) {
+					SwitchPreferenceCompat enable = findPreference(PREF_BACKGROUND_GAME_ENABLED);
+					if (enable != null) enable.setChecked(true);
+				} else if (isAdded()) {
+					Toast.makeText(requireContext(), R.string.bg_game_notification_permission,
+							Toast.LENGTH_LONG).show();
+				}
+			});
 	private final ActivityResultLauncher<String> openDirLauncher = registerForActivityResult(
 			new PickDirResultContract(),
 			this::onPickDirResult);
@@ -52,6 +68,21 @@ public class SettingsFragment extends PreferenceFragmentCompat {
 	public void onCreatePreferences(Bundle bundle, String s) {
 		addPreferencesFromResource(R.xml.preferences);
 		findPreference("pref_default_settings").setIntent(new Intent(requireActivity(), ProfilesActivity.class));
+		SwitchPreferenceCompat backgroundMode = findPreference(PREF_BACKGROUND_GAME_ENABLED);
+		if (backgroundMode != null) {
+			backgroundMode.setOnPreferenceChangeListener((pref, value) -> {
+				// Starting a foreground service without a visible notification
+				// would leave no obvious Stop control for the user.
+				if (Boolean.TRUE.equals(value)
+						&& Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+						&& ContextCompat.checkSelfPermission(requireContext(),
+							Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+					notificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+					return false;
+				}
+				return true;
+			});
+		}
 		prefFolder = findPreference(PREF_EMULATOR_DIR);
 		prefFolder.setSummary(Config.getEmulatorDir());
 		prefFolder.setOnPreferenceClickListener(preference -> {
