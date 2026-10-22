@@ -2,11 +2,12 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingStart="48dp"
-    android:paddingEnd="48dp"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp"
     android:paddingTop="16dp"
     android:paddingBottom="16dp"
-    android:gravity="center_vertical">
+    android:gravity="center_vertical"
+    android:background="@drawable/ui_glass_card">
 
    <EditText
        android:id="@+id/etWidth"

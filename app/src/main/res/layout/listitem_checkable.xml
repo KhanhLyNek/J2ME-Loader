@@ -5,14 +5,19 @@
     android:id="@+id/nnf_item_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?selectableItemBackground"
+    android:background="@drawable/ui_glass_card"
+    android:foreground="?attr/selectableItemBackground"
+    android:layout_marginStart="7dp"
+    android:layout_marginTop="4dp"
+    android:layout_marginEnd="7dp"
+    android:layout_marginBottom="4dp"
     android:focusable="true"
-    android:minHeight="46dp"
+    android:minHeight="57dp"
     android:gravity="center_vertical"
     android:nextFocusRight="@id/checkbox"
     android:orientation="horizontal"
-    android:paddingLeft="10dp"
-    android:paddingRight="10dp">
+    android:paddingLeft="15dp"
+    android:paddingRight="15dp">
 
     <ImageView
         android:id="@+id/item_icon"
