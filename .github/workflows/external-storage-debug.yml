@@ -63,3 +63,51 @@ jobs:
           name: J2ME-Full-UI-debug
           path: app/build/outputs/apk/dev/debug/*.apk
           if-no-files-found: error
+
+      # The earlier experimental Glass UI compiled but crashed on launch.
+      # Smoke-test the actual launcher activity in dark and light mode, while
+      # keeping this costly emulator step scoped to the UI redesign branch.
+      - name: Enable Android emulator KVM
+        if: github.ref == 'refs/heads/feature/ui-full-redesign'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Smoke-test launcher on Android 15 (API 35)
+        if: github.ref == 'refs/heads/feature/ui-full-redesign'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            set -e
+            APK="$(find app/build/outputs/apk/dev/debug -name '*.apk' -print -quit)"
+            test -f "$APK"
+            PKG="ru.playsoftware.j2meloader.debug"
+            adb install -r "$APK"
+            # Shared-directory permission is special app access, not a
+            # runtime dangerous permission.
+            adb shell appops set "$PKG" MANAGE_EXTERNAL_STORAGE allow || true
+            for MODE in yes no; do
+              adb shell cmd uimode night "$MODE"
+              adb shell am force-stop "$PKG"
+              adb logcat -c
+              adb shell am start -W -n "$PKG/ru.playsoftware.j2meloader.MainActivity"
+              sleep 12
+              if [ -z "$(adb shell pidof "$PKG" | tr -d '\r')" ]; then
+                echo "App process died on startup in night mode=$MODE"
+                adb logcat -d -v brief | tail -n 180
+                exit 1
+              fi
+              if adb logcat -d -v threadtime | grep -A 15 'FATAL EXCEPTION' | grep -q "Process: $PKG"; then
+                echo "FATAL EXCEPTION during launch, night mode=$MODE"
+                adb logcat -d -v brief | tail -n 180
+                exit 1
+              fi
+              echo "Launcher alive: night mode=$MODE"
+            done
