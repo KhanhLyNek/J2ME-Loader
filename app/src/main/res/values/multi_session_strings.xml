@@ -5,4 +5,5 @@
     <string name="multi_session_overlay_settings">Overlay permission</string>
     <string name="multi_session_notification_only">Notification only</string>
     <string name="multi_session_overlay_unavailable">Overlay settings are not available on this device.</string>
+    <string name="multi_session_minimize_failed">Could not start a background game session. Game stays open. Check notification and battery permissions.</string>
 </resources>
