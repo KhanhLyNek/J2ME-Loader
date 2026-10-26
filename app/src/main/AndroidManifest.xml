@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -126,6 +127,8 @@
         <activity
             android:name="javax.microedition.shell.MicroActivity"
             android:exported="false"
+            android:taskAffinity="${applicationId}.midlet0"
+            android:launchMode="singleTask"
             android:theme="@style/AppTheme.NoActionBar"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode"
             android:process=":midlet" />
@@ -139,6 +142,46 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="User-initiated background execution of an emulated J2ME MIDlet during screen off with an ongoing notification, stop action and time-limited CPU wake lock" />
+        </service>
+
+        <!-- Fixed, isolated Android process slots. MIDlet static fields must never share a VM. -->
+        <activity
+            android:name="javax.microedition.shell.MidletSlots$Slot1Activity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode"
+            android:taskAffinity="${applicationId}.midlet1"
+            android:launchMode="singleTask"
+            android:process=":midlet_1" />
+        <activity
+            android:name="javax.microedition.shell.MidletSlots$Slot2Activity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode"
+            android:taskAffinity="${applicationId}.midlet2"
+            android:launchMode="singleTask"
+            android:process=":midlet_2" />
+        <service
+            android:name="javax.microedition.shell.MidletSlots$Slot1Service"
+            android:process=":midlet_1"
+            android:enabled="true"
+            android:exported="false"
+            android:stopWithTask="true"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-initiated emulated game session with a visible stop notification and bounded screen-off wake lock" />
+        </service>
+        <service
+            android:name="javax.microedition.shell.MidletSlots$Slot2Service"
+            android:process=":midlet_2"
+            android:enabled="true"
+            android:exported="false"
+            android:stopWithTask="true"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-initiated emulated game session with a visible stop notification and bounded screen-off wake lock" />
         </service>
 
         <activity android:name=".settings.SettingsActivity"
