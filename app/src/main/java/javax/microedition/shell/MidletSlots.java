@@ -52,15 +52,31 @@ public final class MidletSlots {
     }
 
     public static int currentSlot(Context context) {
+        // Resolve by the current component first. This is reliable even when
+        // HyperOS filters ActivityManager.getRunningAppProcesses().
+        if (context instanceof Slot1Activity || context instanceof Slot1Service) return 1;
+        if (context instanceof Slot2Activity || context instanceof Slot2Service) return 2;
+        if (context instanceof MicroActivity || context instanceof BackgroundGameService) return 0;
+
+        // Android P+ publishes the current process name without inspecting
+        // other running applications (unlike ActivityManager snapshots).
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            int result = slotForProcessName(context, android.app.Application.getProcessName());
+            if (result >= 0) return result;
+        }
         ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
         if (manager != null) {
-            List<ActivityManager.RunningAppProcessInfo> processes = manager.getRunningAppProcesses();
-            if (processes != null) {
-                for (ActivityManager.RunningAppProcessInfo process : processes) {
-                    if (process.pid == Process.myPid()) {
-                        return slotForProcessName(context, process.processName);
+            try {
+                List<ActivityManager.RunningAppProcessInfo> processes = manager.getRunningAppProcesses();
+                if (processes != null) {
+                    for (ActivityManager.RunningAppProcessInfo process : processes) {
+                        if (process.pid == Process.myPid()) {
+                            return slotForProcessName(context, process.processName);
+                        }
                     }
                 }
+            } catch (RuntimeException unavailable) {
+                Log.w(TAG, "Could not inspect current emulator process", unavailable);
             }
         }
         return -1;
