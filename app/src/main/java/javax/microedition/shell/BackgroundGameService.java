@@ -47,11 +47,12 @@ import ru.playsoftware.j2meloader.R;
  * non-reference-counted PARTIAL_WAKE_LOCK is acquired only while the screen
  * is actually off, and only when the user has not selected Eco mode.
  */
-public final class BackgroundGameService extends Service {
+public class BackgroundGameService extends Service {
     private static final String TAG = "J2ME-Background";
     private static final String CHANNEL_ID = "j2me_background_game_v1";
     private static final String ACTION_START = "javax.microedition.shell.BACKGROUND_START";
     private static final String ACTION_STOP = "javax.microedition.shell.BACKGROUND_STOP";
+    private static final String ACTION_MINIMIZE = "javax.microedition.shell.BACKGROUND_MINIMIZE";
     private static final String EXTRA_TITLE = "game_title";
     private static final String EXTRA_PATH = "game_path";
     private static final int NOTIFICATION_ID = 30814;
@@ -69,6 +70,8 @@ public final class BackgroundGameService extends Service {
     private boolean receiverRegistered;
     private boolean enabled;
     private boolean eco;
+    private boolean floating;
+    private SessionBubble sessionBubble;
     private long maxScreenOffMillis;
     private long screenOffStartedAt;
     private String gameTitle;
@@ -94,7 +97,7 @@ public final class BackgroundGameService extends Service {
         if (!preferences.getBoolean(PREF_BACKGROUND_GAME_ENABLED, false)) {
             return;
         }
-        Intent start = new Intent(activity, BackgroundGameService.class);
+        Intent start = new Intent(activity, MidletSlots.serviceForCurrentProcess(activity));
         start.setAction(ACTION_START);
         start.putExtra(EXTRA_TITLE, title);
         start.putExtra(EXTRA_PATH, path);
@@ -107,8 +110,35 @@ public final class BackgroundGameService extends Service {
         }
     }
 
+    /** An explicit foreground menu action; notification works without overlay access. */
+    public static void minimizeForGame(Context activity, String title, String path) {
+        Intent start = new Intent(activity, MidletSlots.serviceForCurrentProcess(activity));
+        start.setAction(ACTION_MINIMIZE);
+        start.putExtra(EXTRA_TITLE, title);
+        start.putExtra(EXTRA_PATH, path);
+        try {
+            ContextCompat.startForegroundService(activity, start);
+        } catch (RuntimeException failure) {
+            Log.w(TAG, "Can't start minimized session; ordinary pause semantics apply", failure);
+        }
+    }
+
     public static void stopForGame(Context activity) {
-        activity.stopService(new Intent(activity, BackgroundGameService.class));
+        activity.stopService(new Intent(activity, MidletSlots.serviceForCurrentProcess(activity)));
+    }
+
+    /** Hide the bubble as soon as the user returns to this game. */
+    public static void onGameVisible() {
+        BackgroundGameService service = activeInstance;
+        if (service != null) {
+            service.floating = false;
+            service.removeBubble();
+        }
+    }
+
+    public static boolean isFloatingMinimized() {
+        BackgroundGameService service = activeInstance;
+        return service != null && service.enabled && service.floating;
     }
 
     public static boolean keepsMidletRunning() {
@@ -118,7 +148,10 @@ public final class BackgroundGameService extends Service {
 
     public static boolean shouldSkipScreenOutput() {
         BackgroundGameService service = activeInstance;
-        return service != null && service.enabled && screenOff;
+        MicroActivity activity = javax.microedition.util.ContextHolder.getActivity();
+        return service != null && service.enabled
+                && (screenOff || (service.floating
+                && (activity == null || !activity.isVisible())));
     }
 
     @Override
@@ -134,22 +167,23 @@ public final class BackgroundGameService extends Service {
             return START_NOT_STICKY;
         }
         if (ACTION_STOP.equals(intent.getAction())) {
-            PreferenceManager.getDefaultSharedPreferences(this).edit()
-                    .putBoolean(PREF_BACKGROUND_GAME_ENABLED, false).apply();
+            // Stopping one session must never disable the other slots.
             finishSession(false);
             return START_NOT_STICKY;
         }
-        if (!ACTION_START.equals(intent.getAction())) {
+        boolean minimize = ACTION_MINIMIZE.equals(intent.getAction());
+        if (!ACTION_START.equals(intent.getAction()) && !minimize) {
             stopSelf();
             return START_NOT_STICKY;
         }
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        if (!preferences.getBoolean(PREF_BACKGROUND_GAME_ENABLED, false)) {
+        if (!minimize && !preferences.getBoolean(PREF_BACKGROUND_GAME_ENABLED, false)) {
             stopSelf();
             return START_NOT_STICKY;
         }
         gameTitle = intent.getStringExtra(EXTRA_TITLE);
         gamePath = intent.getStringExtra(EXTRA_PATH);
+        floating = floating || minimize;
         eco = preferences.getBoolean(PREF_BACKGROUND_GAME_ECO, false);
         int minutes = 60;
         try {
@@ -165,10 +199,10 @@ public final class BackgroundGameService extends Service {
         try {
             Notification notification = makeNotification();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(NOTIFICATION_ID, notification,
+                startForeground(notificationId(), notification,
                         ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
             } else {
-                startForeground(NOTIFICATION_ID, notification);
+                startForeground(notificationId(), notification);
             }
         } catch (RuntimeException e) {
             Log.e(TAG, "Foreground service denied; falling back to normal MIDlet pausing", e);
@@ -198,7 +232,25 @@ public final class BackgroundGameService extends Service {
         // Race-safe: if the Activity paused while the service was starting,
         // resume the MIDlet only after the foreground service is active.
         MidletThread.resumeForBackground();
+        if (floating) showBubble();
         return START_NOT_STICKY;
+    }
+
+    private int notificationId() {
+        return NOTIFICATION_ID + Math.max(0, MidletSlots.currentSlot(this)) * 10;
+    }
+
+    private int timeoutNotificationId() {
+        return TIMEOUT_NOTIFICATION_ID + Math.max(0, MidletSlots.currentSlot(this)) * 10;
+    }
+
+    private void showBubble() {
+        if (sessionBubble == null) sessionBubble = new SessionBubble(this);
+        sessionBubble.show(gameTitle, gamePath);
+    }
+
+    private void removeBubble() {
+        if (sessionBubble != null) sessionBubble.dismiss();
     }
 
     private void makeNotificationChannel() {
@@ -221,9 +273,10 @@ public final class BackgroundGameService extends Service {
         Intent openGame;
         if (gamePath != null && !gamePath.isEmpty()) {
             openGame = new Intent(Intent.ACTION_DEFAULT, Uri.parse(gamePath),
-                    this, MicroActivity.class);
+                    this, MidletSlots.activityForCurrentProcess(this));
             openGame.putExtra(KEY_MIDLET_NAME, gameTitle);
-            openGame.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            openGame.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                     | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         } else {
             openGame = getPackageManager().getLaunchIntentForPackage(getPackageName());
@@ -233,12 +286,14 @@ public final class BackgroundGameService extends Service {
         }
         int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
         PendingIntent returnIntent = PendingIntent.getActivity(
-                this, REQUEST_RETURN, openGame, pendingFlags);
+                this, REQUEST_RETURN + Math.max(0, MidletSlots.currentSlot(this)) * 10,
+                openGame, pendingFlags);
 
         Intent stopIntent = new Intent(this, BackgroundGameService.class);
         stopIntent.setAction(ACTION_STOP);
         PendingIntent stop = PendingIntent.getService(
-                this, REQUEST_STOP, stopIntent, pendingFlags);
+                this, REQUEST_STOP + Math.max(0, MidletSlots.currentSlot(this)) * 10,
+                stopIntent, pendingFlags);
 
         String title = gameTitle != null && !gameTitle.trim().isEmpty()
                 ? gameTitle : getString(R.string.bg_game_notification_title);
@@ -289,7 +344,7 @@ public final class BackgroundGameService extends Service {
         // Do not burn CPU in a game hidden behind the lock screen or
         // another app after the user wakes the display.
         MicroActivity activity = javax.microedition.util.ContextHolder.getActivity();
-        if (activity != null && !activity.isVisible()) {
+        if (!floating && activity != null && !activity.isVisible()) {
             MidletThread.pauseApp();
         }
     }
@@ -312,10 +367,10 @@ public final class BackgroundGameService extends Service {
         if (expired) {
             Log.i(TAG, "Background session expired after " +
                     (SystemClock.elapsedRealtime() - screenOffStartedAt) + " ms");
-            PreferenceManager.getDefaultSharedPreferences(this).edit()
-                    .putBoolean(PREF_BACKGROUND_GAME_ENABLED, false).apply();
         }
         enabled = false;
+        floating = false;
+        removeBubble();
         activeInstance = null;
         onScreenOn();
         if (receiverRegistered) {
@@ -346,7 +401,7 @@ public final class BackgroundGameService extends Service {
                         .setPriority(NotificationCompat.PRIORITY_LOW)
                         .build();
                 try {
-                    manager.notify(TIMEOUT_NOTIFICATION_ID, done);
+                    manager.notify(timeoutNotificationId(), done);
                 } catch (SecurityException denied) {
                     Log.w(TAG, "Couldn't show timeout notification", denied);
                 }
@@ -357,6 +412,8 @@ public final class BackgroundGameService extends Service {
     @Override
     public void onDestroy() {
         enabled = false;
+        floating = false;
+        removeBubble();
         activeInstance = null;
         onScreenOn();
         if (receiverRegistered) {
