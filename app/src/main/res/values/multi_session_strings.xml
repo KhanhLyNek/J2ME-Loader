@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="multi_session_minimize">Minimize game / run in background</string>
+    <string name="multi_session_overlay_permission">To show a chat-head-like floating bubble, allow this app to appear over other apps. You can also minimize without a bubble and reopen the game from its ongoing notification.</string>
+    <string name="multi_session_overlay_settings">Overlay permission</string>
+    <string name="multi_session_notification_only">Notification only</string>
+    <string name="multi_session_overlay_unavailable">Overlay settings are not available on this device.</string>
+</resources>
