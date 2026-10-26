@@ -35,6 +35,8 @@ import androidx.preference.PreferenceManager;
 import java.io.File;
 
 import javax.microedition.shell.MicroActivity;
+import javax.microedition.shell.MidletSlots;
+import android.widget.Toast;
 import javax.microedition.util.ContextHolder;
 
 import ru.playsoftware.j2meloader.BuildConfig;
@@ -161,8 +163,15 @@ public class Config {
 			intent.putExtra(KEY_START_ARGUMENTS, arguments);
 			context.startActivity(intent);
 		} else {
-			Intent intent = new Intent(Intent.ACTION_DEFAULT, Uri.parse(path),
-					context, MicroActivity.class);
+			Class<? extends MicroActivity> slot = MidletSlots.findFreeActivity(context);
+            if (slot == null) {
+                Toast.makeText(context, "All three J2ME sessions are occupied. Stop one game first.",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+            Intent intent = new Intent(Intent.ACTION_DEFAULT, Uri.parse(path),
+                    context, slot);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 			intent.putExtra(KEY_MIDLET_NAME, name);
 			intent.putExtra(KEY_START_ARGUMENTS, arguments);
 			context.startActivity(intent);
