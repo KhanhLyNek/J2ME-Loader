@@ -55,7 +55,9 @@ final class SessionBubble {
         params.y = (int) ((140 + slot * 70) * density);
 
         TextView view = new TextView(service);
-        view.setText("J" + (slot + 1));
+        String label = title == null || title.trim().isEmpty()
+                ? "J" + (slot + 1) : title.trim();
+        view.setText(label.length() > 3 ? label.substring(0, 3) : label);
         view.setTextColor(Color.WHITE);
         view.setTextSize(16);
         view.setGravity(Gravity.CENTER);
