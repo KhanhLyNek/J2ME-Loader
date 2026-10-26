@@ -120,7 +120,7 @@ final class SessionBubble {
             manager.addView(view, params);
             bubble = view;
             return true;
-        } catch (RuntimeException | SecurityException denied) {
+        } catch (RuntimeException denied) {
             return false;
         }
     }
