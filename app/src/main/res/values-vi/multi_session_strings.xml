@@ -5,4 +5,5 @@
     <string name="multi_session_overlay_settings">Cấp quyền bong bóng nổi</string>
     <string name="multi_session_notification_only">Chỉ dùng thông báo</string>
     <string name="multi_session_overlay_unavailable">Thiết bị không hỗ trợ mở phần cấp quyền bong bóng.</string>
+    <string name="multi_session_minimize_failed">Không thể bật phiên game nền. Game vẫn mở. Hãy kiểm tra quyền thông báo và quyền hoạt động nền.</string>
 </resources>
