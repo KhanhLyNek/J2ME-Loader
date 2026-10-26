@@ -108,11 +108,8 @@ public class MicroLoader {
 		}
 		Display.initDisplay();
 		Graphics3D.initGraphics3D();
-		File cacheDir = ContextHolder.getCacheDir();
-		// Some phones return null here
-		if (cacheDir != null && cacheDir.exists()) {
-			FileUtils.clearDirectory(cacheDir);
-		}
+		// Do not wipe the app-wide cache when another emulator process
+        // could be loading resources from it. Android reclaims cache space.
 		File internalDriveDir = new File(Config.getFsInternalDir());
 		if (!internalDriveDir.exists()) {
 			internalDriveDir.mkdirs();
