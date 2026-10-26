@@ -98,6 +98,9 @@ public class MicroActivity extends AppCompatActivity {
 
 	private Displayable current;
 	private boolean visible;
+    // Prevent the game from receiving a pause/resume cycle between the
+    // foreground-service request and Android's asynchronous service startup.
+    private boolean minimizeTransition;
 	private boolean actionBarEnabled;
 	private boolean statusBarEnabled;
 	private MicroLoader microLoader;
@@ -212,6 +215,7 @@ public class MicroActivity extends AppCompatActivity {
 	public void onResume() {
 		super.onResume();
 		visible = true;
+        minimizeTransition = false;
         BackgroundGameService.onGameVisible();
 		MidletThread.resumeApp();
 	}
@@ -228,8 +232,9 @@ public class MicroActivity extends AppCompatActivity {
 		// If the user switches to another app with the screen still on,
 		// pause the MIDlet and save CPU. A later SCREEN_OFF broadcast resumes
 		// it for the opted-in session.
-		if (!BackgroundGameService.keepsMidletRunning()
-                || (interactive && !BackgroundGameService.isFloatingMinimized())) {
+		if (!minimizeTransition
+                && (!BackgroundGameService.keepsMidletRunning()
+                || (interactive && !BackgroundGameService.isFloatingMinimized()))) {
 			MidletThread.pauseApp();
 		}
 		super.onPause();
@@ -519,14 +524,28 @@ public class MicroActivity extends AppCompatActivity {
     }
 
     private void minimizeNow() {
-        BackgroundGameService.minimizeForGame(this, appName, appPath);
-        // Every MicroActivity runs in its own task, so moving back to the
-        // library won't destroy the running game in a different process.
+        // launch the service *before* the Activity leaves the foreground:
+        // FGS startup is asynchronous and a premature pauseApp() can cause
+        // network MIDlets to disconnect or terminate themselves.
+        minimizeTransition = true;
+        if (!BackgroundGameService.minimizeForGame(this, appName, appPath)) {
+            minimizeTransition = false;
+            Toast.makeText(this, R.string.multi_session_minimize_failed,
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
         Intent library = new Intent(this, MainActivity.class);
         library.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                 | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        startActivity(library);
+        try {
+            startActivity(library);
+        } catch (RuntimeException error) {
+            minimizeTransition = false;
+            android.util.Log.e("J2ME-Minimize", "Unable to return to launcher", error);
+            Toast.makeText(this, R.string.multi_session_minimize_failed,
+                    Toast.LENGTH_LONG).show();
+        }
     }
 
 	private void handleVkOptions(int id) {
