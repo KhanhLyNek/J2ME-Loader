@@ -52,18 +52,21 @@ public final class MidletSlots {
     }
 
     public static int currentSlot(Context context) {
-        // Resolve by the current component first. This is reliable even when
-        // HyperOS filters ActivityManager.getRunningAppProcesses().
-        if (context instanceof Slot1Activity || context instanceof Slot1Service) return 1;
-        if (context instanceof Slot2Activity || context instanceof Slot2Service) return 2;
-        if (context instanceof MicroActivity || context instanceof BackgroundGameService) return 0;
-
-        // Android P+ publishes the current process name without inspecting
-        // other running applications (unlike ActivityManager snapshots).
+        // Prefer the current process name: it verifies that the final, merged
+        // Android manifest actually placed this Activity/Service in its slot.
+        // In particular, src/debug/AndroidManifest.xml must NOT remove the
+        // android:process attribute inherited from src/main.
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-            int result = slotForProcessName(context, android.app.Application.getProcessName());
-            if (result >= 0) return result;
+            int actual = slotForProcessName(context, android.app.Application.getProcessName());
+            int expected = expectedSlotFromComponent(context);
+            if (expected >= 0 && actual != expected) {
+                Log.e(TAG, "Manifest process mismatch: expected emulator slot "
+                        + expected + " but got " + android.app.Application.getProcessName());
+                return -1;
+            }
+            return actual;
         }
+
         ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
         if (manager != null) {
             try {
@@ -76,9 +79,16 @@ public final class MidletSlots {
                     }
                 }
             } catch (RuntimeException unavailable) {
-                Log.w(TAG, "Could not inspect current emulator process", unavailable);
+                Log.w(TAG, "Cannot resolve MIDlet process via ActivityManager", unavailable);
             }
         }
+        return -1;
+    }
+
+    private static int expectedSlotFromComponent(Context context) {
+        if (context instanceof Slot1Activity || context instanceof Slot1Service) return 1;
+        if (context instanceof Slot2Activity || context instanceof Slot2Service) return 2;
+        if (context instanceof MicroActivity || context instanceof BackgroundGameService) return 0;
         return -1;
     }
 
