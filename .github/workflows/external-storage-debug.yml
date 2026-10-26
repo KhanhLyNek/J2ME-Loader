@@ -5,6 +5,7 @@ on:
     branches:
       - feature/external-storage
       - feature/background-game
+      - feature/multi-session-bubbles
   workflow_dispatch:
 
 permissions:
