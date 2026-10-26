@@ -293,7 +293,7 @@ public class BackgroundGameService extends Service {
                 this, REQUEST_RETURN + Math.max(0, MidletSlots.currentSlot(this)) * 10,
                 openGame, pendingFlags);
 
-        Intent stopIntent = new Intent(this, BackgroundGameService.class);
+        Intent stopIntent = new Intent(this, MidletSlots.serviceForCurrentProcess(this));
         stopIntent.setAction(ACTION_STOP);
         PendingIntent stop = PendingIntent.getService(
                 this, REQUEST_STOP + Math.max(0, MidletSlots.currentSlot(this)) * 10,
