@@ -231,7 +231,11 @@ public class BackgroundGameService extends Service {
         }
         // Race-safe: if the Activity paused while the service was starting,
         // resume the MIDlet only after the foreground service is active.
-        MidletThread.resumeForBackground();
+        // A hidden game must not resume just because a service starts while
+        // the screen is awake, unless minimization was explicitly requested.
+        if (floating || (powerManager != null && !powerManager.isInteractive())) {
+            MidletThread.resumeForBackground();
+        }
         if (floating) showBubble();
         return START_NOT_STICKY;
     }
