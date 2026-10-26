@@ -111,15 +111,17 @@ public class BackgroundGameService extends Service {
     }
 
     /** An explicit foreground menu action; notification works without overlay access. */
-    public static void minimizeForGame(Context activity, String title, String path) {
-        Intent start = new Intent(activity, MidletSlots.serviceForCurrentProcess(activity));
-        start.setAction(ACTION_MINIMIZE);
-        start.putExtra(EXTRA_TITLE, title);
-        start.putExtra(EXTRA_PATH, path);
+    public static boolean minimizeForGame(Context activity, String title, String path) {
         try {
+            Intent start = new Intent(activity, MidletSlots.serviceForCurrentProcess(activity));
+            start.setAction(ACTION_MINIMIZE);
+            start.putExtra(EXTRA_TITLE, title);
+            start.putExtra(EXTRA_PATH, path);
             ContextCompat.startForegroundService(activity, start);
+            return true;
         } catch (RuntimeException failure) {
-            Log.w(TAG, "Can't start minimized session; ordinary pause semantics apply", failure);
+            Log.e(TAG, "Unable to minimize MIDlet; keeping its Activity visible", failure);
+            return false;
         }
     }
 
@@ -206,6 +208,10 @@ public class BackgroundGameService extends Service {
             }
         } catch (RuntimeException e) {
             Log.e(TAG, "Foreground service denied; falling back to normal MIDlet pausing", e);
+            // The Activity may already have returned to the library.
+            // Without a visible foreground service the MIDlet must not
+            // continue indefinitely as an invisible background process.
+            if (minimize) MidletThread.pauseApp();
             stopSelf();
             return START_NOT_STICKY;
         }
