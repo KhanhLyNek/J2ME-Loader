@@ -2,10 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <application tools:ignore="GoogleAppIndexingWarning,MissingApplicationIcon">
-        <activity
-            android:name="javax.microedition.shell.MicroActivity"
-            tools:remove="android:process" />
-    </application>
+    <!-- The full-emulator debug builds must retain each MIDlet Activity's
+         android:process declaration from src/main. Otherwise the game runs
+         in the library process, and its foreground service cannot manage
+         the same MIDlet state. The standalone midlet flavor overrides this
+         in src/midlet/AndroidManifest.xml instead. -->
+    <application tools:ignore="GoogleAppIndexingWarning,MissingApplicationIcon" />
 
 </manifest>
