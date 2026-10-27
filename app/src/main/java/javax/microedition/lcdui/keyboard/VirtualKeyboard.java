@@ -1101,10 +1101,24 @@ public class VirtualKeyboard implements Overlay, Runnable {
 
 	@Override
 	public void cancel() {
+		// A surface can disappear while a finger is holding a key. Releasing
+		// the visual state alone leaves GameCanvas.getKeyStates() stuck.
+		// Do not call MenuKey.onUp(): that would open the options menu.
+		for (int i = 0; i < associatedKeys.length; i++) {
+			VirtualKey key = associatedKeys[i];
+			associatedKeys[i] = null;
+			if (key != null && key.selected && target != null && !(key instanceof MenuKey)) {
+				key.onUp();
+			}
+		}
 		for (VirtualKey key : keypad) {
+			if (key.selected && target != null && !(key instanceof MenuKey)) {
+				key.onUp();
+			}
 			key.selected = false;
 			handler.removeCallbacks(key);
 		}
+		handler.removeCallbacks(this);
 	}
 
 	@Override
