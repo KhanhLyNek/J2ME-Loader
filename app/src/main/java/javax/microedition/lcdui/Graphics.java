@@ -411,7 +411,8 @@ public class Graphics implements
 		srcR.set(x_src, y_src, x_src + width, y_src + height);
 
 		Matrix matrix = regionMatrix;
-		matrix.reset();
+		// TRANS_NONE dominates tile maps; don't even touch the native matrix.
+		if (transform != TRANS_NONE) matrix.reset();
 		switch (transform) {
 			case TRANS_NONE: {
 				if ((anchor & Graphics.RIGHT) != 0) {
