@@ -32,6 +32,7 @@ import android.opengl.GLU;
 import android.opengl.GLUtils;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
@@ -159,7 +160,7 @@ public abstract class Canvas extends Displayable {
 	private Image offscreen;
 	private Image offscreenCopy;
 	private int onX, onY, onWidth, onHeight;
-	private long lastFrameTime = System.currentTimeMillis();
+	private long lastFrameTime = SystemClock.uptimeMillis();
 	private Handler uiHandler;
 	private Overlay overlay;
 	private FpsCounter fpsCounter;
@@ -642,6 +643,11 @@ public abstract class Canvas extends Displayable {
 				x >= this.width || y >= this.height) {
 			return;
 		}
+		boolean hidden = BackgroundGameService.shouldSkipScreenOutput();
+		// GameCanvas invokes flushGraphics on every game frame. Never copy
+		// pixels for an invisible display. A visible mini overlay samples
+		// only a few frames per second instead of every game tick.
+		if (hidden && !BackgroundGameService.shouldCaptureMiniFrame()) return;
 		synchronized (bufferLock) {
 			if (Thread.holdsLock(paintEvent)) {
 				offscreen.getSingleGraphics().flush(image, x, y, width, height);
@@ -649,27 +655,70 @@ public abstract class Canvas extends Displayable {
 			}
 			offscreenCopy.getSingleGraphics().flush(image, x, y, width, height);
 		}
-		requestFlushToScreen();
+		if (!hidden) requestFlushToScreen();
 	}
 
 	// ExtendedImage
 	public void flushBuffer(Image image, int x, int y) {
 		limitFps();
+		boolean hidden = BackgroundGameService.shouldSkipScreenOutput();
+		if (hidden && !BackgroundGameService.shouldCaptureMiniFrame()) return;
 		synchronized (bufferLock) {
 			image.copyTo(offscreenCopy, x, y);
 		}
-		requestFlushToScreen();
+		if (!hidden) requestFlushToScreen();
+	}
+
+	/** Forward mini-overlay touches through the normal J2ME event queue. */
+	public void postMiniPointer(int eventType, float x, float y) {
+		if (eventType == CanvasEvent.POINTER_PRESSED
+				|| eventType == CanvasEvent.POINTER_DRAGGED
+				|| eventType == CanvasEvent.POINTER_RELEASED) {
+			Display.postEvent(CanvasEvent.getInstance(this, eventType, 0, x, y));
+		}
 	}
 
 	private void limitFps() {
-		if (fpsLimit <= 0) return;
-		try {
-			long millis = (1000 / fpsLimit) - (System.currentTimeMillis() - lastFrameTime);
-			if (millis > 0) Thread.sleep(millis);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+		int backgroundCap = BackgroundGameService.backgroundFrameRateCap();
+		int effectiveFps = fpsLimit <= 0 ? backgroundCap
+				: (backgroundCap > 0 ? Math.min(fpsLimit, backgroundCap) : fpsLimit);
+		if (effectiveFps <= 0) return;
+		long frameInterval = Math.max(1L, 1000L / effectiveFps);
+		long now = SystemClock.uptimeMillis();
+		long wait = Math.max(0L, Math.min(frameInterval,
+				frameInterval - (now - lastFrameTime)));
+		if (wait > 0) {
+			try {
+				Thread.sleep(wait);
+			} catch (InterruptedException interrupted) {
+				Thread.currentThread().interrupt();
+			}
 		}
-		lastFrameTime = System.currentTimeMillis();
+		lastFrameTime = SystemClock.uptimeMillis();
+	}
+
+	/**
+	 * Draw the existing presentation buffer into a reusable, low-resolution
+	 * thumbnail. Called only while a mini window is visible and the screen
+	 * is on; no extra render thread or continuously allocated Bitmaps.
+	 */
+	public boolean copyMiniFrameTo(Bitmap thumbnail) {
+		if (thumbnail == null || offscreenCopy == null || width <= 0 || height <= 0) {
+			return false;
+		}
+		try {
+			synchronized (bufferLock) {
+				android.graphics.Canvas preview = new android.graphics.Canvas(thumbnail);
+				preview.drawColor(android.graphics.Color.BLACK);
+				preview.drawBitmap(offscreenCopy.getBitmap(),
+						new Rect(0, 0, width, height),
+						new Rect(0, 0, thumbnail.getWidth(), thumbnail.getHeight()), null);
+			}
+			return true;
+		} catch (RuntimeException unavailable) {
+			Log.w(TAG, "Mini-window frame not available", unavailable);
+			return false;
+		}
 	}
 
 	@SuppressLint("NewApi")
@@ -944,7 +993,8 @@ public abstract class Canvas extends Displayable {
 			// Keep paint callbacks (often used as game ticks), but avoid
 			// copying whole video frames into the screen presentation buffer
 			// while Android's display is off.
-			if (!BackgroundGameService.shouldSkipScreenOutput()) {
+			if (!BackgroundGameService.shouldSkipScreenOutput()
+					|| BackgroundGameService.shouldCaptureMiniFrame()) {
 				synchronized (bufferLock) {
 					offscreen.copyTo(offscreenCopy);
 				}
@@ -1259,8 +1309,8 @@ public abstract class Canvas extends Displayable {
 			softBar.closeMenu();
 			overlayView.setVisibility(false);
 			if (overlay != null) {
-				overlay.setTarget(null);
 				overlay.cancel();
+				overlay.setTarget(null);
 				overlay = null;
 			}
 		}

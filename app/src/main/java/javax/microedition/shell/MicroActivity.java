@@ -34,6 +34,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.provider.Settings;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -82,6 +83,7 @@ import javax.microedition.util.ContextHolder;
 import io.reactivex.SingleObserver;
 import io.reactivex.disposables.Disposable;
 import ru.playsoftware.j2meloader.BuildConfig;
+import ru.playsoftware.j2meloader.MainActivity;
 import ru.playsoftware.j2meloader.R;
 import ru.playsoftware.j2meloader.config.Config;
 import ru.playsoftware.j2meloader.databinding.ActivityMicroBinding;
@@ -96,6 +98,9 @@ public class MicroActivity extends AppCompatActivity {
 
 	private Displayable current;
 	private boolean visible;
+    // Prevent the game from receiving a pause/resume cycle between the
+    // foreground-service request and Android's asynchronous service startup.
+    private boolean minimizeTransition;
 	private boolean actionBarEnabled;
 	private boolean statusBarEnabled;
 	private MicroLoader microLoader;
@@ -210,6 +215,8 @@ public class MicroActivity extends AppCompatActivity {
 	public void onResume() {
 		super.onResume();
 		visible = true;
+        minimizeTransition = false;
+        BackgroundGameService.onGameVisible();
 		MidletThread.resumeApp();
 	}
 
@@ -225,7 +232,9 @@ public class MicroActivity extends AppCompatActivity {
 		// If the user switches to another app with the screen still on,
 		// pause the MIDlet and save CPU. A later SCREEN_OFF broadcast resumes
 		// it for the opted-in session.
-		if (!BackgroundGameService.keepsMidletRunning() || interactive) {
+		if (!minimizeTransition
+                && (!BackgroundGameService.keepsMidletRunning()
+                || (interactive && !BackgroundGameService.isFloatingMinimized()))) {
 			MidletThread.pauseApp();
 		}
 		super.onPause();
@@ -459,6 +468,8 @@ public class MicroActivity extends AppCompatActivity {
 		int id = item.getItemId();
 		if (id == R.id.action_exit_midlet) {
 			showExitConfirmation();
+        } else if (id == R.id.action_minimize_midlet) {
+            requestMinimize();
 		} else if (id == R.id.action_save_log) {
 			saveLog();
 		} else if (id == R.id.action_lock_orientation) {
@@ -484,6 +495,58 @@ public class MicroActivity extends AppCompatActivity {
 		}
 		return true;
 	}
+
+    private void requestMinimize() {
+        // Android's overlay permission is user-controlled. Never silently
+        // take it; notifications provide a usable no-overlay fallback.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                && !Settings.canDrawOverlays(this)) {
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.multi_session_minimize)
+                    .setMessage(R.string.multi_session_overlay_permission)
+                    .setPositiveButton(R.string.multi_session_overlay_settings, (d, w) -> {
+                        Intent permission = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                Uri.parse("package:" + getPackageName()));
+                        try {
+                            startActivity(permission);
+                        } catch (RuntimeException blocked) {
+                            Toast.makeText(this, R.string.multi_session_overlay_unavailable,
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    })
+                    .setNeutralButton(R.string.multi_session_notification_only,
+                            (d, w) -> minimizeNow())
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            return;
+        }
+        minimizeNow();
+    }
+
+    private void minimizeNow() {
+        // launch the service *before* the Activity leaves the foreground:
+        // FGS startup is asynchronous and a premature pauseApp() can cause
+        // network MIDlets to disconnect or terminate themselves.
+        minimizeTransition = true;
+        if (!BackgroundGameService.minimizeForGame(this, appName, appPath)) {
+            minimizeTransition = false;
+            Toast.makeText(this, R.string.multi_session_minimize_failed,
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        Intent library = new Intent(this, MainActivity.class);
+        library.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        try {
+            startActivity(library);
+        } catch (RuntimeException error) {
+            minimizeTransition = false;
+            android.util.Log.e("J2ME-Minimize", "Unable to return to launcher", error);
+            Toast.makeText(this, R.string.multi_session_minimize_failed,
+                    Toast.LENGTH_LONG).show();
+        }
+    }
 
 	private void handleVkOptions(int id) {
 		VirtualKeyboard vk = ContextHolder.getVk();

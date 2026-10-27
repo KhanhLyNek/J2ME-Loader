@@ -5,6 +5,7 @@ on:
     branches:
       - feature/external-storage
       - feature/background-game
+      - feature/multi-session-bubbles
   workflow_dispatch:
 
 permissions:
@@ -56,9 +57,68 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDevDebug --stacktrace
 
+      - name: Verify isolated MIDlet processes in merged debug manifest
+        if: github.ref_name == 'feature/multi-session-bubbles'
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+
+          android_ns = "{http://schemas.android.com/apk/res/android}"
+          expected = {
+              "javax.microedition.shell.MicroActivity": ":midlet",
+              "javax.microedition.shell.BackgroundGameService": ":midlet",
+              "javax.microedition.shell.MidletSlots$Slot1Activity": ":midlet_1",
+              "javax.microedition.shell.MidletSlots$Slot1Service": ":midlet_1",
+              "javax.microedition.shell.MidletSlots$Slot2Activity": ":midlet_2",
+              "javax.microedition.shell.MidletSlots$Slot2Service": ":midlet_2",
+          }
+          candidates = [
+              p for p in Path("app/build/intermediates").rglob("AndroidManifest.xml")
+              if "devDebug" in str(p) and "merged" in str(p).lower()
+          ]
+          if not candidates:
+              raise SystemExit("No devDebug merged AndroidManifest.xml found")
+          for path in candidates:
+              try:
+                  root = ET.parse(path).getroot()
+                  actual = {
+                      e.attrib.get(android_ns + "name"): e.attrib.get(android_ns + "process")
+                      for e in root.findall(".//application/activity")
+                               + root.findall(".//application/service")
+                  }
+              except (ET.ParseError, OSError):
+                  continue
+              if all(actual.get(name) == process for name, process in expected.items()):
+                  print("Verified emulator activities and services in", path)
+                  break
+          else:
+              print("Merged manifests checked:", *candidates, sep="\n")
+              print("Expected processes:", expected)
+              print("Actual last parsed values:", {name: actual.get(name) for name in expected})
+              raise SystemExit("MIDlet process isolation is broken: aborting APK upload")
+          PY
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: J2ME-Background-Game-debug
           path: app/build/outputs/apk/dev/debug/*.apk
+          if-no-files-found: error
+
+      # Release enables R8 shrinking/optimisation. It uses an ephemeral CI
+      # signing key, so it is NOT an update for the official J2ME-Loader APK.
+      # Do not block shipping a working debug APK if a pre-existing R8
+      # dependency warning makes the release variant fail.
+      - name: Build R8-optimized dev release APK
+        id: release
+        continue-on-error: true
+        run: ./gradlew assembleDevRelease --stacktrace
+
+      - name: Upload R8-optimized release APK (different signature)
+        if: steps.release.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: J2ME-MultiSession-R8-release-UNOFFICIAL
+          path: app/build/outputs/apk/dev/release/*.apk
           if-no-files-found: error

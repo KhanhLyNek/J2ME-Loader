@@ -77,6 +77,7 @@ import java.util.List;
 import java.util.Set;
 
 import javax.microedition.shell.MicroActivity;
+import javax.microedition.shell.MidletSlots;
 import javax.microedition.util.ContextHolder;
 
 import ru.playsoftware.j2meloader.R;
@@ -819,8 +820,15 @@ public class ConfigActivity extends AppCompatActivity implements View.OnClickLis
 	}
 
 	private void startMIDlet() {
-		Intent i = new Intent(this, MicroActivity.class);
-		i.setData(getIntent().getData());
+		Class<? extends MicroActivity> slot = MidletSlots.findFreeActivity(this);
+        if (slot == null) {
+            Toast.makeText(this, "All three J2ME sessions are occupied. Stop one game first.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        Intent i = new Intent(this, slot);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        i.setData(getIntent().getData());
 		i.putExtra(KEY_MIDLET_NAME, getIntent().getStringExtra(KEY_MIDLET_NAME));
 		startActivity(i);
 		finish();
