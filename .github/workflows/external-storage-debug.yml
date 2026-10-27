@@ -105,3 +105,20 @@ jobs:
           name: J2ME-Background-Game-debug
           path: app/build/outputs/apk/dev/debug/*.apk
           if-no-files-found: error
+
+      # Release enables R8 shrinking/optimisation. It uses an ephemeral CI
+      # signing key, so it is NOT an update for the official J2ME-Loader APK.
+      # Do not block shipping a working debug APK if a pre-existing R8
+      # dependency warning makes the release variant fail.
+      - name: Build R8-optimized dev release APK
+        id: release
+        continue-on-error: true
+        run: ./gradlew assembleDevRelease --stacktrace
+
+      - name: Upload R8-optimized release APK (different signature)
+        if: steps.release.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: J2ME-MultiSession-R8-release-UNOFFICIAL
+          path: app/build/outputs/apk/dev/release/*.apk
+          if-no-files-found: error
