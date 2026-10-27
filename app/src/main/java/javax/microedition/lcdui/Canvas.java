@@ -1259,8 +1259,8 @@ public abstract class Canvas extends Displayable {
 			softBar.closeMenu();
 			overlayView.setVisibility(false);
 			if (overlay != null) {
-				overlay.setTarget(null);
 				overlay.cancel();
+				overlay.setTarget(null);
 				overlay = null;
 			}
 		}
