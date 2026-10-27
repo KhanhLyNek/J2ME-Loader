@@ -66,6 +66,8 @@ public class Graphics implements
 	private final Rect rect = new Rect();
 	private final RectF rectF = new RectF();
 	private final Path path = new Path();
+	// Reuse this native-backed object across thousands of tiled sprites.
+	private final Matrix regionMatrix = new Matrix();
 
 	private final DashPathEffect dashPathEffect = new DashPathEffect(new float[]{5, 5}, 0);
 	private int stroke = SOLID;
@@ -408,7 +410,8 @@ public class Graphics implements
 		float dy;
 		srcR.set(x_src, y_src, x_src + width, y_src + height);
 
-		Matrix matrix = new Matrix();
+		Matrix matrix = regionMatrix;
+		matrix.reset();
 		switch (transform) {
 			case TRANS_NONE: {
 				if ((anchor & Graphics.RIGHT) != 0) {
