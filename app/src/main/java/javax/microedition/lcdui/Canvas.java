@@ -669,6 +669,15 @@ public abstract class Canvas extends Displayable {
 		if (!hidden) requestFlushToScreen();
 	}
 
+	/** Forward mini-overlay touches through the normal J2ME event queue. */
+	public void postMiniPointer(int eventType, float x, float y) {
+		if (eventType == CanvasEvent.POINTER_PRESSED
+				|| eventType == CanvasEvent.POINTER_DRAGGED
+				|| eventType == CanvasEvent.POINTER_RELEASED) {
+			Display.postEvent(CanvasEvent.getInstance(this, eventType, 0, x, y));
+		}
+	}
+
 	private void limitFps() {
 		int backgroundCap = BackgroundGameService.backgroundFrameRateCap();
 		int effectiveFps = fpsLimit <= 0 ? backgroundCap
