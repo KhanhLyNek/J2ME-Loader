@@ -71,6 +71,8 @@ public class BackgroundGameService extends Service {
     private boolean enabled;
     private boolean eco;
     private boolean floating;
+    private volatile boolean miniPreviewVisible;
+    private volatile long nextMiniFrameAt;
     private SessionBubble sessionBubble;
     private long maxScreenOffMillis;
     private long screenOffStartedAt;
@@ -134,6 +136,7 @@ public class BackgroundGameService extends Service {
         BackgroundGameService service = activeInstance;
         if (service != null) {
             service.floating = false;
+            service.miniPreviewVisible = false;
             service.removeBubble();
         }
     }
@@ -146,6 +149,35 @@ public class BackgroundGameService extends Service {
     public static boolean keepsMidletRunning() {
         BackgroundGameService service = activeInstance;
         return service != null && service.enabled;
+    }
+
+    /** Cap the game-driven redraw loop while hidden, without affecting
+     * network timers or unrelated game threads. User FPS limits still win. */
+    public static int backgroundFrameRateCap() {
+        BackgroundGameService service = activeInstance;
+        if (service == null || !service.enabled) return 0;
+        if (screenOff) return 8;
+        if (service.floating) return service.miniPreviewVisible ? 18 : 12;
+        return 0;
+    }
+
+    /** Allow only a few presentation-buffer copies for the mini overlay. */
+    public static boolean shouldCaptureMiniFrame() {
+        BackgroundGameService service = activeInstance;
+        if (service == null || !service.enabled || !service.floating
+                || !service.miniPreviewVisible || screenOff) return false;
+        long now = SystemClock.uptimeMillis();
+        if (now < service.nextMiniFrameAt) return false;
+        service.nextMiniFrameAt = now + 160L; // at most ~6 screen copies per second
+        return true;
+    }
+
+    static void setMiniPreviewVisible(boolean visible) {
+        BackgroundGameService service = activeInstance;
+        if (service != null) {
+            service.miniPreviewVisible = visible;
+            service.nextMiniFrameAt = 0L;
+        }
     }
 
     public static boolean shouldSkipScreenOutput() {
@@ -326,6 +358,7 @@ public class BackgroundGameService extends Service {
             return;
         }
         screenOff = true;
+        if (sessionBubble != null) sessionBubble.onDisplayOff();
         screenOffStartedAt = SystemClock.elapsedRealtime();
         handler.removeCallbacks(onTimeout);
         handler.postDelayed(onTimeout, maxScreenOffMillis);
@@ -351,6 +384,7 @@ public class BackgroundGameService extends Service {
         screenOffStartedAt = 0L;
         handler.removeCallbacks(onTimeout);
         releaseCpuLock();
+        if (sessionBubble != null) sessionBubble.onDisplayOn();
         // Do not burn CPU in a game hidden behind the lock screen or
         // another app after the user wakes the display.
         MicroActivity activity = javax.microedition.util.ContextHolder.getActivity();
@@ -380,6 +414,7 @@ public class BackgroundGameService extends Service {
         }
         enabled = false;
         floating = false;
+        miniPreviewVisible = false;
         removeBubble();
         activeInstance = null;
         onScreenOn();
@@ -423,6 +458,7 @@ public class BackgroundGameService extends Service {
     public void onDestroy() {
         enabled = false;
         floating = false;
+        miniPreviewVisible = false;
         removeBubble();
         activeInstance = null;
         onScreenOn();
