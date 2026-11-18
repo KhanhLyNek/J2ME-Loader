@@ -18,6 +18,7 @@
 package ru.playsoftware.j2meloader.settings;
 
 import static ru.playsoftware.j2meloader.util.Constants.PREF_ADD_CUTOUT_AREA;
+import static ru.playsoftware.j2meloader.util.Constants.PREF_BATTERY_OPTIMIZATION;
 import static ru.playsoftware.j2meloader.util.Constants.PREF_EMULATOR_DIR;
 
 import android.annotation.SuppressLint;
@@ -83,6 +84,31 @@ public class SettingsFragment extends PreferenceFragmentCompat {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
 			findPreference(PREF_ADD_CUTOUT_AREA).setVisible(true);
 		}
+		Preference prefBattery = findPreference(PREF_BATTERY_OPTIMIZATION);
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+			prefBattery.setOnPreferenceClickListener(preference -> {
+				openBatteryOptimizationSettings();
+				return true;
+			});
+		} else {
+			prefBattery.setVisible(false);
+		}
+	}
+
+	/**
+	 * Opens the system list where the user can exempt the app from battery optimization.
+	 * Uses the settings screen instead of the direct request dialog, so no
+	 * REQUEST_IGNORE_BATTERY_OPTIMIZATIONS permission (restricted on Google Play) is needed.
+	 */
+	private void openBatteryOptimizationSettings() {
+		try {
+			startActivity(new Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+			return;
+		} catch (ActivityNotFoundException ignored) {}
+		try {
+			startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+					Uri.parse("package:" + requireContext().getPackageName())));
+		} catch (ActivityNotFoundException ignored) {}
 	}
 
 	private void initLanguages() {

@@ -107,6 +107,7 @@ public class MicroActivity extends AppCompatActivity {
 	private boolean visible;
 	private boolean pauseSuppressed;
 	private boolean pauseDisabled;
+	private boolean backgroundRun;
 	private boolean actionBarEnabled;
 	private boolean statusBarEnabled;
 	private boolean cutoutsEnabled;
@@ -200,12 +201,17 @@ public class MicroActivity extends AppCompatActivity {
 			}
 		}
 		setOrientation(orientation);
-		pauseDisabled = microLoader.isPauseDisabled();
+		backgroundRun = sp.getBoolean(PREF_BACKGROUND_RUN, false);
+		// Never pause the MIDlet when the screen turns off if background run is requested
+		pauseDisabled = microLoader.isPauseDisabled() || backgroundRun;
 		menuKey = microLoader.getMenuKeyCode();
 		inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
 
 		try {
 			loadMIDlet();
+			if (backgroundRun) {
+				KeepAliveService.start(this, appName, getIntent());
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			showErrorDialog(e.toString());
@@ -783,6 +789,7 @@ public class MicroActivity extends AppCompatActivity {
 	@Override
 	protected void onDestroy() {
 		// Stop the MIDlet thread explicitly (fixes stuck audio)
+		KeepAliveService.stop(this);
 		MidletThread.destroyApp();
 		binding = null;
 		super.onDestroy();

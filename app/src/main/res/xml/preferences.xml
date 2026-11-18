@@ -48,6 +48,18 @@
         android:title="@string/pref_wakelock_title" />
     <SwitchPreferenceCompat
         android:defaultValue="false"
+        android:icon="@drawable/ic_setting_keep_screen_on"
+        android:key="pref_background_run"
+        android:summary="@string/pref_background_run_summary"
+        android:title="@string/pref_background_run_title" />
+    <Preference
+        android:dependency="pref_background_run"
+        android:icon="@drawable/ic_setting_keep_screen_on"
+        android:key="pref_battery_optimization"
+        android:summary="@string/pref_battery_optimization_summary"
+        android:title="@string/pref_battery_optimization_title" />
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
         android:icon="@drawable/ic_setting_screenshot"
         android:key="pref_screenshot_switch"
         android:title="@string/pref_screenshot_title"

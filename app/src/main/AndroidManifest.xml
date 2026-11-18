@@ -5,6 +5,9 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -164,6 +167,16 @@
         <receiver
             android:name="com.nokia.mid.ui.NotificationBroadcastReceiver"
             android:process=":midlet" />
+        <!-- Keeps the :midlet process alive while the screen is off (Android 14+ requires a typed FGS) -->
+        <service
+            android:name="javax.microedition.shell.KeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:process=":midlet">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps a running J2ME game (MIDlet) alive with the screen off at the user's explicit request" />
+        </service>
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
             android:enabled="false"

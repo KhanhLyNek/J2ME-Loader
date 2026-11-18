@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pref_background_run_title">Run in background</string>
+    <string name="pref_background_run_summary">Keep the game running when the screen is off or the app is minimized. Shows a notification and uses more battery.</string>
+    <string name="pref_battery_optimization_title">Battery optimization</string>
+    <string name="pref_battery_optimization_summary">Set the app to unrestricted so Android does not suspend the game</string>
+    <string name="notification_channel_background">Game running in background</string>
+    <string name="notification_background_running">Running in background</string>
+    <string name="notification_action_exit">Exit</string>
+</resources>
