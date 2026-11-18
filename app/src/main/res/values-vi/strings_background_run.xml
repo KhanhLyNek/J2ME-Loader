@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pref_background_run_title">Chạy nền</string>
+    <string name="pref_background_run_summary">Giữ game tiếp tục chạy khi tắt màn hình hoặc thu nhỏ ứng dụng. Hiện thông báo và tốn pin hơn.</string>
+    <string name="pref_battery_optimization_title">Tối ưu hóa pin</string>
+    <string name="pref_battery_optimization_summary">Đặt ứng dụng ở chế độ không hạn chế để Android không tạm dừng game</string>
+    <string name="notification_channel_background">Game đang chạy nền</string>
+    <string name="notification_background_running">Đang chạy nền</string>
+    <string name="notification_action_exit">Thoát</string>
+</resources>
